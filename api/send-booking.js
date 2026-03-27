@@ -10,12 +10,8 @@ module.exports = async (req, res) => {
     }
 
     try {
-        // DEBUG
         console.log("BODY RECEIVED:", req.body);
-        console.log("EMAIL_USER:", process.env.EMAIL_USER);
-        console.log("EMAIL_PASS exists:", !!process.env.EMAIL_PASS);
 
-        // Get form data
         const {
             name,
             email,
@@ -37,28 +33,31 @@ module.exports = async (req, res) => {
             });
         }
 
-        // ✅ FIXED DATE PARSING (NO "Z", NO ISO conversion)
-        const rawDate = new Date(datetime);
+        // ❗ SAFE FIX: treat datetime-local as raw string (NO new Date(datetime))
+        const [datePart, timePart] = datetime.split("T");
 
-        if (isNaN(rawDate.getTime())) {
+        if (!datePart || !timePart) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid datetime format"
+            });
+        }
+
+        const [year, month, day] = datePart.split("-");
+        const [hour, minute] = timePart.split(":");
+
+        // Optional safety check
+        if (!year || !month || !day || !hour || !minute) {
             return res.status(400).json({
                 success: false,
                 message: "Invalid datetime value"
             });
         }
 
-        // ✅ PHILIPPINES TIME FORMAT (SAFE)
-        const bookingTimePH = new Intl.DateTimeFormat("en-PH", {
-            timeZone: "Asia/Manila",
-            year: "numeric",
-            month: "long",
-            day: "2-digit",
-            hour: "2-digit",
-            minute: "2-digit",
-            hour12: true
-        }).format(rawDate);
+        // ✅ FINAL SAFE FORMAT (NO TIMEZONE ISSUES)
+        const bookingTimePH = `${month}/${day}/${year} ${hour}:${minute}`;
 
-        // Create transporter (Gmail)
+        // Create transporter
         const transporter = nodemailer.createTransport({
             service: "gmail",
             auth: {
