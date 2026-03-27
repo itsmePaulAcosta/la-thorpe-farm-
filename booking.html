@@ -31,43 +31,51 @@
 
     <!-- Template Stylesheet -->
     <link href="css/style.css" rel="stylesheet">
- <script>
+    
+<script>
 document.addEventListener("DOMContentLoaded", function () {
+
+    // Catering toggle
     document.getElementById("cateringToggle").addEventListener("change", function () {
         document.getElementById("cateringFields").style.display =
             this.checked ? "block" : "none";
     });
-});
-</script>
 
-<script>
-document.getElementById("bookingForm").addEventListener("submit", async function (e) {
-    e.preventDefault();
+    // Booking form submit
+    document.getElementById("bookingForm").addEventListener("submit", async function (e) {
+        e.preventDefault();
 
-    const formData = new FormData(this);
-    const data = Object.fromEntries(formData.entries());
+        const formData = new FormData(this);
+        const data = Object.fromEntries(formData.entries());
 
-    try {
-        const res = await fetch("/api/send-booking", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify(data)
-        });
+        // add checkbox state manually (IMPORTANT FIX)
+        data.catering = document.getElementById("cateringToggle").checked;
 
-        const result = await res.json();
+        try {
+            const res = await fetch("/api/send-booking", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify(data)
+            });
 
-        if (res.ok) {
-            alert("✅ Booking sent successfully!");
-            this.reset();
-        } else {
-            alert("❌ Failed: " + result.message);
+            const result = await res.json();
+
+            if (res.ok) {
+                alert("✅ Booking sent successfully!");
+                this.reset();
+                document.getElementById("cateringFields").style.display = "none";
+            } else {
+                alert("❌ Failed: " + result.message);
+            }
+
+        } catch (error) {
+            alert("❌ Network error. Please try again.");
+            console.log(error);
         }
+    });
 
-    } catch (error) {
-        alert("❌ Network error. Please try again.");
-    }
 });
 </script>
 
@@ -148,7 +156,7 @@ document.getElementById("bookingForm").addEventListener("submit", async function
                     <div class="p-5 wow fadeInUp" data-wow-delay="0.2s">
                         <h5 class="section-title ff-secondary text-start text-primary fw-normal">Reservation</h5>
                         <h1 class="text-white mb-4">Book A Table Online</h1>
-                      <form id="bookingForm"></form>
+                      <form id="bookingForm">
     <div class="row g-3">
 
         <div class="col-md-6">
