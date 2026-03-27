@@ -49,9 +49,7 @@ document.addEventListener("DOMContentLoaded", function () {
     name: this.querySelector('[name="name"]').value,
     email: this.querySelector('[name="email"]').value,
     phone: this.querySelector('[name="phone"]').value,
-datetime: new Date(
-    this.querySelector('[name="datetime"]').value
-).toISOString(),
+datetime: this.querySelector('[name="datetime"]').value,
     people: this.querySelector('[name="people"]').value,
     eventType: this.querySelector('[name="eventType"]')?.value || "",
     guestCount: this.querySelector('[name="guestCount"]')?.value || "",
