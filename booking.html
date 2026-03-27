@@ -32,8 +32,6 @@
     <!-- Template Stylesheet -->
     <link href="css/style.css" rel="stylesheet">
     
-
-
 <script>
 document.addEventListener("DOMContentLoaded", function () {
 
@@ -47,45 +45,21 @@ document.addEventListener("DOMContentLoaded", function () {
     document.getElementById("bookingForm").addEventListener("submit", async function (e) {
         e.preventDefault();
 
-        const datetimeRaw = this.querySelector('[name="datetime"]').value;
-
-        // ❗ FIX: manually parse datetime-local (prevents timezone shifting)
-        const [datePart, timePart] = datetimeRaw.split("T");
-        const [year, month, day] = datePart.split("-");
-        const [hour, minute] = timePart.split(":");
-
-        const bookingDate = new Date(
-            year,
-            month - 1,
-            day,
-            hour,
-            minute
-        );
-
-        // format in Philippines time (NO SHIFT)
-        const bookingTimePH = new Intl.DateTimeFormat("en-PH", {
-            timeZone: "Asia/Manila",
-            year: "numeric",
-            month: "long",
-            day: "2-digit",
-            hour: "2-digit",
-            minute: "2-digit",
-            hour12: true
-        }).format(bookingDate);
-
         const data = {
-            name: this.querySelector('[name="name"]').value,
-            email: this.querySelector('[name="email"]').value,
-            phone: this.querySelector('[name="phone"]').value,
-            datetime: datetimeRaw, // raw value (IMPORTANT)
-            formattedDatetime: bookingTimePH, // FIXED display value
-            people: this.querySelector('[name="people"]').value,
-            eventType: this.querySelector('[name="eventType"]')?.value || "",
-            guestCount: this.querySelector('[name="guestCount"]')?.value || "",
-            address: this.querySelector('[name="address"]')?.value || "",
-            message: this.querySelector('[name="message"]')?.value || "",
-            catering: document.getElementById("cateringToggle").checked
-        };
+    name: this.querySelector('[name="name"]').value,
+    email: this.querySelector('[name="email"]').value,
+    phone: this.querySelector('[name="phone"]').value,
+    datetime: this.querySelector('[name="datetime"]').value,
+    people: this.querySelector('[name="people"]').value,
+    eventType: this.querySelector('[name="eventType"]')?.value || "",
+    guestCount: this.querySelector('[name="guestCount"]')?.value || "",
+    address: this.querySelector('[name="address"]')?.value || "",
+    message: this.querySelector('[name="message"]')?.value || "",
+    catering: document.getElementById("cateringToggle").checked
+};
+
+        // add checkbox state manually (IMPORTANT FIX)
+        data.catering = document.getElementById("cateringToggle").checked;
 
         try {
             const res = await fetch("/api/send-booking", {
