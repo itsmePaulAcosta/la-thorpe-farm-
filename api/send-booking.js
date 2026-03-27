@@ -1,22 +1,16 @@
+const express = require("express");
 const nodemailer = require("nodemailer");
 
-module.exports = async (req, res) => {
-    // Allow only POST
-    if (req.method !== "POST") {
-        return res.status(405).json({
-            success: false,
-            message: "Only POST allowed"
-        });
-    }
+const router = express.Router();
 
+router.post("/send-booking", async (req, res) => {
     try {
-        console.log("BODY RECEIVED:", req.body);
-
         const {
             name,
             email,
             phone,
             datetime,
+            formattedDatetime,
             people,
             eventType,
             guestCount,
@@ -25,42 +19,15 @@ module.exports = async (req, res) => {
             catering
         } = req.body;
 
-        // Validation
-        if (!name || !email || !phone || !datetime || !people) {
+        // ✅ USE SAFE VALUE (NO Date conversion needed)
+        const bookingTime = formattedDatetime || datetime;
+
+        if (!name || !email || !phone || !datetime) {
             return res.status(400).json({
-                success: false,
                 message: "Missing required fields"
             });
         }
 
-        // ❗ FIX: DO NOT use new Date(datetime) (causes timezone shift)
-
-        const [datePart, timePart] = datetime.split("T");
-
-        if (!datePart || !timePart) {
-            return res.status(400).json({
-                success: false,
-                message: "Invalid datetime format"
-            });
-        }
-
-        const [year, month, day] = datePart.split("-");
-        const [hour, minute] = timePart.split(":");
-
-        // ✅ SAFE: treat as Philippines local time (no conversion, no UTC shift)
-        const bookingTimePH = new Intl.DateTimeFormat("en-PH", {
-            timeZone: "Asia/Manila",
-            year: "numeric",
-            month: "long",
-            day: "2-digit",
-            hour: "numeric",
-            minute: "2-digit",
-            hour12: true
-        }).format(
-            new Date(`${year}-${month}-${day}T${hour}:${minute}:00`)
-        );
-
-        // Create transporter
         const transporter = nodemailer.createTransport({
             service: "gmail",
             auth: {
@@ -69,54 +36,42 @@ module.exports = async (req, res) => {
             }
         });
 
-        // Email content
         const mailOptions = {
-            from: `"La Thorpe Booking" <${process.env.EMAIL_USER}>`,
-            to: process.env.EMAIL_USER,
-            replyTo: email,
-            subject: "🍽 New Table Booking Received",
+            from: process.env.EMAIL_USER,
+            to: "lathorpecateringservices@gmail.com",
+            subject: "New Booking Reservation",
             html: `
-                <div style="font-family: Arial; padding: 20px;">
-                    <h2 style="color:#8B5E3C;">New Booking Details</h2>
+                <h2>New Booking Details</h2>
 
-                    <p><b>Name:</b> ${name}</p>
-                    <p><b>Email:</b> ${email}</p>
-                    <p><b>Phone:</b> ${phone}</p>
+                <p><b>Name:</b> ${name}</p>
+                <p><b>Email:</b> ${email}</p>
+                <p><b>Phone:</b> ${phone}</p>
 
-                    <p><b>Date & Time (Philippines Time):</b> ${bookingTimePH}</p>
+                <p><b>Date & Time (Philippines Time):</b> ${bookingTime}</p>
 
-                    <p><b>People:</b> ${people}</p>
-                    <p><b>Catering:</b> ${catering ? "YES" : "NO"}</p>
+                <p><b>Number of People:</b> ${people}</p>
 
-                    <hr>
+                <p><b>Catering:</b> ${catering ? "Yes" : "No"}</p>
 
-                    <h3 style="color:#8B5E3C;">Catering Info</h3>
-                    <p><b>Event Type:</b> ${eventType || "N/A"}</p>
-                    <p><b>Guests:</b> ${guestCount || "N/A"}</p>
-                    <p><b>Address:</b> ${address || "N/A"}</p>
-
-                    <hr>
-
-                    <h3 style="color:#8B5E3C;">Message</h3>
-                    <p>${message || "N/A"}</p>
-                </div>
+                ${eventType ? `<p><b>Event Type:</b> ${eventType}</p>` : ""}
+                ${guestCount ? `<p><b>Guest Count:</b> ${guestCount}</p>` : ""}
+                ${address ? `<p><b>Address:</b> ${address}</p>` : ""}
+                ${message ? `<p><b>Message:</b> ${message}</p>` : ""}
             `
         };
 
-        // Send email
         await transporter.sendMail(mailOptions);
 
         return res.status(200).json({
-            success: true,
-            message: "Booking email sent successfully"
+            message: "Booking sent successfully"
         });
 
     } catch (error) {
-        console.error("EMAIL ERROR:", error);
-
+        console.error(error);
         return res.status(500).json({
-            success: false,
-            message: error.message
+            message: "Server error"
         });
     }
-};
+});
+
+module.exports = router;
