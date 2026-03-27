@@ -33,17 +33,21 @@ module.exports = async (req, res) => {
             });
         }
 
-        // ✅ FIX: Proper Date handling (NO manual split)
-        const bookingDate = new Date(datetime);
+        // ❗ FIX: DO NOT use new Date(datetime) (causes timezone shift)
 
-        if (isNaN(bookingDate.getTime())) {
+        const [datePart, timePart] = datetime.split("T");
+
+        if (!datePart || !timePart) {
             return res.status(400).json({
                 success: false,
-                message: "Invalid datetime value"
+                message: "Invalid datetime format"
             });
         }
 
-        // ✅ Format to Philippines Time (12-hour AM/PM)
+        const [year, month, day] = datePart.split("-");
+        const [hour, minute] = timePart.split(":");
+
+        // ✅ SAFE: treat as Philippines local time (no conversion, no UTC shift)
         const bookingTimePH = new Intl.DateTimeFormat("en-PH", {
             timeZone: "Asia/Manila",
             year: "numeric",
@@ -52,7 +56,9 @@ module.exports = async (req, res) => {
             hour: "numeric",
             minute: "2-digit",
             hour12: true
-        }).format(bookingDate);
+        }).format(
+            new Date(`${year}-${month}-${day}T${hour}:${minute}:00`)
+        );
 
         // Create transporter
         const transporter = nodemailer.createTransport({
