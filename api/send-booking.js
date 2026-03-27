@@ -10,12 +10,12 @@ module.exports = async (req, res) => {
     }
 
     try {
-        // ✅ DEBUG (optional but recommended)
+        // DEBUG
         console.log("BODY RECEIVED:", req.body);
         console.log("EMAIL_USER:", process.env.EMAIL_USER);
         console.log("EMAIL_PASS exists:", !!process.env.EMAIL_PASS);
 
-        // ✅ Get form data
+        // Get form data
         const {
             name,
             email,
@@ -29,7 +29,7 @@ module.exports = async (req, res) => {
             catering
         } = req.body;
 
-        // ❗ Basic validation
+        // Validation
         if (!name || !email || !phone || !datetime || !people) {
             return res.status(400).json({
                 success: false,
@@ -37,7 +37,18 @@ module.exports = async (req, res) => {
             });
         }
 
-        // ✅ Create transporter (Gmail)
+        // ✅ PHILIPPINES TIME FORMAT
+        const bookingTimePH = new Intl.DateTimeFormat("en-PH", {
+            timeZone: "Asia/Manila",
+            year: "numeric",
+            month: "long",
+            day: "2-digit",
+            hour: "2-digit",
+            minute: "2-digit",
+            hour12: true
+        }).format(new Date(datetime));
+
+        // Create transporter (Gmail)
         const transporter = nodemailer.createTransport({
             service: "gmail",
             auth: {
@@ -46,7 +57,7 @@ module.exports = async (req, res) => {
             }
         });
 
-        // ✅ Email content (FULL DETAILS)
+        // Email content
         const mailOptions = {
             from: `"La Thorpe Booking" <${process.env.EMAIL_USER}>`,
             to: process.env.EMAIL_USER,
@@ -59,7 +70,9 @@ module.exports = async (req, res) => {
                     <p><b>Name:</b> ${name}</p>
                     <p><b>Email:</b> ${email}</p>
                     <p><b>Phone:</b> ${phone}</p>
-                    <p><b>Date & Time:</b> ${datetime}</p>
+
+                    <p><b>Date & Time (Philippines Time):</b> ${bookingTimePH}</p>
+
                     <p><b>People:</b> ${people}</p>
                     <p><b>Catering:</b> ${catering ? "YES" : "NO"}</p>
 
@@ -78,10 +91,9 @@ module.exports = async (req, res) => {
             `
         };
 
-        // ✅ Send email
+        // Send email
         await transporter.sendMail(mailOptions);
 
-        // ✅ Success response
         return res.status(200).json({
             success: true,
             message: "Booking email sent successfully"
