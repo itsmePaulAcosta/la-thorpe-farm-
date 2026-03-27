@@ -1,3 +1,4 @@
+
 const nodemailer = require("nodemailer");
 
 module.exports = async (req, res) => {
@@ -33,8 +34,7 @@ module.exports = async (req, res) => {
             });
         }
 
-        // ❗ IMPORTANT: DO NOT USE new Date() (it causes timezone shifting)
-
+        // Expecting format: YYYY-MM-DDTHH:MM
         const [datePart, timePart] = datetime.split("T");
 
         if (!datePart || !timePart) {
@@ -47,8 +47,12 @@ module.exports = async (req, res) => {
         const [year, month, day] = datePart.split("-");
         const [hour, minute] = timePart.split(":");
 
-        // ✅ FINAL FIX: EXACT USER SELECTED TIME (NO CONVERSION)
-        const bookingTimePH = `${year}-${month}-${day} ${hour}:${minute}`;
+        // ✅ FIX: Convert to 12-hour format with AM/PM
+        const hourNum = parseInt(hour, 10);
+        const ampm = hourNum >= 12 ? "PM" : "AM";
+        const hour12 = hourNum % 12 || 12;
+
+        const bookingTimePH = `${year}-${month}-${day} ${hour12}:${minute} ${ampm}`;
 
         // Create transporter
         const transporter = nodemailer.createTransport({
@@ -82,7 +86,7 @@ module.exports = async (req, res) => {
 
                     <h3 style="color:#8B5E3C;">Catering Info</h3>
                     <p><b>Event Type:</b> ${eventType || "N/A"}</p>
-                    <p><b>Guests:</b> ${guestCount || "N/A"}</p>
+                    <p><b>Guests:</b> ${guestCount || "N/A"} </p>
                     <p><b>Address:</b> ${address || "N/A"}</p>
 
                     <hr>
