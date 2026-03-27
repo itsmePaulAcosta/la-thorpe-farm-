@@ -38,16 +38,16 @@ module.exports = async (req, res) => {
         }
 
         // ✅ PHILIPPINES TIME FORMAT
-        const bookingTimePH = new Intl.DateTimeFormat("en-PH", {
-            timeZone: "Asia/Manila",
-            year: "numeric",
-            month: "long",
-            day: "2-digit",
-            hour: "2-digit",
-            minute: "2-digit",
-            hour12: true
-        }).format(new Date(datetime));
-
+       const bookingTimePH = new Intl.DateTimeFormat("en-PH", {
+    timeZone: "Asia/Manila",
+    year: "numeric",
+    month: "long",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true
+}).format(new Date(datetime + "Z"));
+        
         // Create transporter (Gmail)
         const transporter = nodemailer.createTransport({
             service: "gmail",
