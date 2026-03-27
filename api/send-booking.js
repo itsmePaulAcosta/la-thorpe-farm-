@@ -1,61 +1,77 @@
-import nodemailer from "nodemailer";
+const nodemailer = require("nodemailer");
 
 export default async function handler(req, res) {
-  if (req.method !== "POST") {
-    return res.status(405).json({ message: "Only POST allowed" });
-  }
+    if (req.method !== "POST") {
+        return res.status(405).json({ message: "Only POST allowed" });
+    }
 
-  const {
-    name,
-    email,
-    phone,
-    datetime,
-    people,
-    eventType,
-    guestCount,
-    address,
-    message
-  } = req.body;
+    try {
+        const {
+            name,
+            email,
+            phone,
+            datetime,
+            people,
+            eventType,
+            guestCount,
+            address,
+            message,
+            catering
+        } = req.body;
 
-  try {
-    // EMAIL TRANSPORTER
-    const transporter = nodemailer.createTransport({
-      service: "gmail",
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS
-      }
-    });
+        // 1. EMAIL TRANSPORT (GMAIL)
+        const transporter = nodemailer.createTransport({
+            service: "gmail",
+            auth: {
+                user: process.env.EMAIL_USER,
+                pass: process.env.EMAIL_PASS
+            }
+        });
 
-    // EMAIL CONTENT
-    await transporter.sendMail({
-      from: `"La Thorpe Booking" <${process.env.EMAIL_USER}>`,
-      to: process.env.EMAIL_USER,
-      replyTo: email,
-      subject: "New Table Booking - La Thorpe",
-      html: `
-        <h2>New Booking Request</h2>
+        // 2. EMAIL MESSAGE
+        const mailOptions = {
+            from: `"La Thorpe Booking" <${process.env.EMAIL_USER}>`,
+            to: process.env.EMAIL_USER,
+            replyTo: email,
+            subject: "🍽 New Table Booking Received",
+            html: `
+                <h2>New Booking Details</h2>
 
-        <b>Name:</b> ${name}<br>
-        <b>Email:</b> ${email}<br>
-        <b>Phone:</b> ${phone}<br>
-        <b>Date & Time:</b> ${datetime}<br>
-        <b>People:</b> ${people}<br><br>
+                <p><b>Name:</b> ${name}</p>
+                <p><b>Email:</b> ${email}</p>
+                <p><b>Phone:</b> ${phone}</p>
+                <p><b>Date & Time:</b> ${datetime}</p>
+                <p><b>People:</b> ${people}</p>
+                <p><b>Catering:</b> ${catering ? "YES" : "NO"}</p>
 
-        <h3>Catering Details</h3>
-        <b>Event Type:</b> ${eventType}<br>
-        <b>Guests:</b> ${guestCount}<br>
-        <b>Address:</b> ${address}<br><br>
+                <hr>
 
-        <b>Message:</b><br>
-        ${message}
-      `
-    });
+                <h3>Catering Info</h3>
+                <p><b>Event Type:</b> ${eventType || "N/A"}</p>
+                <p><b>Guests:</b> ${guestCount || "N/A"}</p>
+                <p><b>Address:</b> ${address || "N/A"}</p>
 
-    return res.status(200).json({ success: true });
+                <hr>
 
-  } catch (error) {
-    console.error(error);
-    return res.status(500).json({ success: false, error: error.message });
-  }
+                <h3>Message</h3>
+                <p>${message || "N/A"}</p>
+            `
+        };
+
+        // 3. SEND EMAIL
+        await transporter.sendMail(mailOptions);
+
+        return res.status(200).json({
+            success: true,
+            message: "Booking email sent successfully"
+        });
+
+    } catch (error) {
+        console.error("Email Error:", error);
+
+        return res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
 }
