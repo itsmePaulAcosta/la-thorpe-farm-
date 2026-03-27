@@ -1,8 +1,11 @@
 const nodemailer = require("nodemailer");
 
-export default async function handler(req, res) {
+module.exports = async (req, res) => {
     if (req.method !== "POST") {
-        return res.status(405).json({ message: "Only POST allowed" });
+        return res.status(405).json({
+            success: false,
+            message: "Only POST allowed"
+        });
     }
 
     try {
@@ -19,7 +22,7 @@ export default async function handler(req, res) {
             catering
         } = req.body;
 
-        // 1. EMAIL TRANSPORT (GMAIL)
+        // Gmail transporter
         const transporter = nodemailer.createTransport({
             service: "gmail",
             auth: {
@@ -28,7 +31,7 @@ export default async function handler(req, res) {
             }
         });
 
-        // 2. EMAIL MESSAGE
+        // Email content
         const mailOptions = {
             from: `"La Thorpe Booking" <${process.env.EMAIL_USER}>`,
             to: process.env.EMAIL_USER,
@@ -58,7 +61,6 @@ export default async function handler(req, res) {
             `
         };
 
-        // 3. SEND EMAIL
         await transporter.sendMail(mailOptions);
 
         return res.status(200).json({
@@ -71,7 +73,7 @@ export default async function handler(req, res) {
 
         return res.status(500).json({
             success: false,
-            error: error.message
+            message: error.message
         });
     }
-}
+};
