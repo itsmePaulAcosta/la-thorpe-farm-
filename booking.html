@@ -45,8 +45,18 @@ document.addEventListener("DOMContentLoaded", function () {
     document.getElementById("bookingForm").addEventListener("submit", async function (e) {
         e.preventDefault();
 
-        const formData = new FormData(this);
-        const data = Object.fromEntries(formData.entries());
+        const data = {
+    name: this.querySelector('[name="name"]').value,
+    email: this.querySelector('[name="email"]').value,
+    phone: this.querySelector('[name="phone"]').value,
+    datetime: this.querySelector('[name="datetime"]').value,
+    people: this.querySelector('[name="people"]').value,
+    eventType: this.querySelector('[name="eventType"]')?.value || "",
+    guestCount: this.querySelector('[name="guestCount"]')?.value || "",
+    address: this.querySelector('[name="address"]')?.value || "",
+    message: this.querySelector('[name="message"]')?.value || "",
+    catering: document.getElementById("cateringToggle").checked
+};
 
         // add checkbox state manually (IMPORTANT FIX)
         data.catering = document.getElementById("cateringToggle").checked;
