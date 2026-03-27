@@ -37,17 +37,27 @@ module.exports = async (req, res) => {
             });
         }
 
-        // ✅ PHILIPPINES TIME FORMAT
-       const bookingTimePH = new Intl.DateTimeFormat("en-PH", {
-    timeZone: "Asia/Manila",
-    year: "numeric",
-    month: "long",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: true
-}).format(new Date(datetime + "Z"));
-        
+        // ✅ FIXED DATE PARSING (NO "Z", NO ISO conversion)
+        const rawDate = new Date(datetime);
+
+        if (isNaN(rawDate.getTime())) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid datetime value"
+            });
+        }
+
+        // ✅ PHILIPPINES TIME FORMAT (SAFE)
+        const bookingTimePH = new Intl.DateTimeFormat("en-PH", {
+            timeZone: "Asia/Manila",
+            year: "numeric",
+            month: "long",
+            day: "2-digit",
+            hour: "2-digit",
+            minute: "2-digit",
+            hour12: true
+        }).format(rawDate);
+
         // Create transporter (Gmail)
         const transporter = nodemailer.createTransport({
             service: "gmail",
