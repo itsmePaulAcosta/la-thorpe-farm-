@@ -1,16 +1,22 @@
-const express = require("express");
 const nodemailer = require("nodemailer");
 
-const router = express.Router();
+module.exports = async (req, res) => {
+    // Allow only POST
+    if (req.method !== "POST") {
+        return res.status(405).json({
+            success: false,
+            message: "Only POST allowed"
+        });
+    }
 
-router.post("/send-booking", async (req, res) => {
     try {
+        console.log("BODY RECEIVED:", req.body);
+
         const {
             name,
             email,
             phone,
             datetime,
-            formattedDatetime,
             people,
             eventType,
             guestCount,
@@ -19,15 +25,32 @@ router.post("/send-booking", async (req, res) => {
             catering
         } = req.body;
 
-        // ✅ USE SAFE VALUE (NO Date conversion needed)
-        const bookingTime = formattedDatetime || datetime;
-
-        if (!name || !email || !phone || !datetime) {
+        // Validation
+        if (!name || !email || !phone || !datetime || !people) {
             return res.status(400).json({
+                success: false,
                 message: "Missing required fields"
             });
         }
 
+        // ❗ IMPORTANT: DO NOT USE new Date() (it causes timezone shifting)
+
+        const [datePart, timePart] = datetime.split("T");
+
+        if (!datePart || !timePart) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid datetime format"
+            });
+        }
+
+        const [year, month, day] = datePart.split("-");
+        const [hour, minute] = timePart.split(":");
+
+        // ✅ FINAL FIX: EXACT USER SELECTED TIME (NO CONVERSION)
+        const bookingTimePH = `${year}-${month}-${day} ${hour}:${minute}`;
+
+        // Create transporter
         const transporter = nodemailer.createTransport({
             service: "gmail",
             auth: {
@@ -36,42 +59,54 @@ router.post("/send-booking", async (req, res) => {
             }
         });
 
+        // Email content
         const mailOptions = {
-            from: process.env.EMAIL_USER,
-            to: "lathorpecateringservices@gmail.com",
-            subject: "New Booking Reservation",
+            from: `"La Thorpe Booking" <${process.env.EMAIL_USER}>`,
+            to: process.env.EMAIL_USER,
+            replyTo: email,
+            subject: "🍽 New Table Booking Received",
             html: `
-                <h2>New Booking Details</h2>
+                <div style="font-family: Arial; padding: 20px;">
+                    <h2 style="color:#8B5E3C;">New Booking Details</h2>
 
-                <p><b>Name:</b> ${name}</p>
-                <p><b>Email:</b> ${email}</p>
-                <p><b>Phone:</b> ${phone}</p>
+                    <p><b>Name:</b> ${name}</p>
+                    <p><b>Email:</b> ${email}</p>
+                    <p><b>Phone:</b> ${phone}</p>
 
-                <p><b>Date & Time (Philippines Time):</b> ${bookingTime}</p>
+                    <p><b>Date & Time (Philippines Time):</b> ${bookingTimePH}</p>
 
-                <p><b>Number of People:</b> ${people}</p>
+                    <p><b>People:</b> ${people}</p>
+                    <p><b>Catering:</b> ${catering ? "YES" : "NO"}</p>
 
-                <p><b>Catering:</b> ${catering ? "Yes" : "No"}</p>
+                    <hr>
 
-                ${eventType ? `<p><b>Event Type:</b> ${eventType}</p>` : ""}
-                ${guestCount ? `<p><b>Guest Count:</b> ${guestCount}</p>` : ""}
-                ${address ? `<p><b>Address:</b> ${address}</p>` : ""}
-                ${message ? `<p><b>Message:</b> ${message}</p>` : ""}
+                    <h3 style="color:#8B5E3C;">Catering Info</h3>
+                    <p><b>Event Type:</b> ${eventType || "N/A"}</p>
+                    <p><b>Guests:</b> ${guestCount || "N/A"}</p>
+                    <p><b>Address:</b> ${address || "N/A"}</p>
+
+                    <hr>
+
+                    <h3 style="color:#8B5E3C;">Message</h3>
+                    <p>${message || "N/A"}</p>
+                </div>
             `
         };
 
+        // Send email
         await transporter.sendMail(mailOptions);
 
         return res.status(200).json({
-            message: "Booking sent successfully"
+            success: true,
+            message: "Booking email sent successfully"
         });
 
     } catch (error) {
-        console.error(error);
+        console.error("EMAIL ERROR:", error);
+
         return res.status(500).json({
-            message: "Server error"
+            success: false,
+            message: error.message
         });
     }
-});
-
-module.exports = router;
+};
