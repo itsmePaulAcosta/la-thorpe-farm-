@@ -1,5 +1,3 @@
-
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -31,26 +29,30 @@
   <!-- DASHBOARD -->
   <div id="dashboard-section" style="display:none;">
     <button id="logoutBtn" class="btn btn-secondary mb-3">Logout</button>
+
     <h4>Welcome, Owner!</h4>
     <hr>
 
-    <!-- MENU -->
+    <!-- MENU UPLOAD -->
     <h5>Menu Management</h5>
     <form id="menuForm" class="mb-3">
       <div class="row g-2">
         <div class="col-md-4">
           <select id="menuCategory" class="form-control" required>
             <option value="catering">Catering</option>
-            <option value="maindishes">Main Dishes</option>
+            <option value="mainDishes">Main Dishes</option>
             <option value="tray">Tray</option>
           </select>
         </div>
+
         <div class="col-md-5">
           <input type="file" id="menuImageFile" class="form-control" accept="image/*" required>
         </div>
+
         <div class="col-md-2">
           <img id="menuImagePreview" style="width:40px;display:none;">
         </div>
+
         <div class="col-md-1">
           <button type="submit" class="btn btn-success w-100">Upload</button>
         </div>
@@ -66,9 +68,11 @@
         <div class="col-md-6">
           <input type="file" id="recentImageFile" class="form-control" accept="image/*" required>
         </div>
+
         <div class="col-md-2">
           <img id="recentImagePreview" style="width:40px;display:none;">
         </div>
+
         <div class="col-md-2">
           <button type="submit" class="btn btn-success w-100">Upload</button>
         </div>
@@ -89,7 +93,7 @@
 document.addEventListener('DOMContentLoaded', function() {
 
   const firebaseConfig = {
-    apiKey: "AIzaSyBuNw7VNAM-Do9ZkiXY5LHKVStJGRwd0Uw",
+    apiKey: "YOUR_API_KEY",
     authDomain: "menu-restaurant-268da.firebaseapp.com",
     projectId: "menu-restaurant-268da",
     storageBucket: "menu-restaurant-268da.appspot.com",
@@ -103,7 +107,7 @@ document.addEventListener('DOMContentLoaded', function() {
   const db = firebase.firestore();
   const storage = firebase.storage();
 
-  // PREVIEW MENU IMAGE
+  // PREVIEW
   document.getElementById('menuImageFile').addEventListener('change', function(e) {
     const file = e.target.files[0];
     const preview = document.getElementById('menuImagePreview');
@@ -113,7 +117,6 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   });
 
-  // PREVIEW RECENT IMAGE
   document.getElementById('recentImageFile').addEventListener('change', function(e) {
     const file = e.target.files[0];
     const preview = document.getElementById('recentImagePreview');
@@ -124,49 +127,43 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 
   // ======================
-  // MENU UPLOAD (FIXED)
+  // MENU UPLOAD
   // ======================
   document.getElementById('menuForm').addEventListener('submit', async function(e) {
     e.preventDefault();
 
     try {
       const category = document.getElementById('menuCategory').value;
-      const fileInput = document.getElementById('menuImageFile');
+      const file = document.getElementById('menuImageFile').files[0];
 
-      if (fileInput.files.length === 0) {
-        alert("Select an image first");
-        return;
-      }
-
-      const file = fileInput.files[0];
-      console.log("Uploading menu image:", file.name);
+      if (!file) return alert("Select an image");
 
       const storageRef = storage.ref('menu/' + Date.now() + '_' + file.name);
 
       await storageRef.put(file);
-
       const imageUrl = await storageRef.getDownloadURL();
-      console.log("Download URL:", imageUrl);
 
-      const itemsRef = db.collection('menu').doc('items');
+      const docRef = db.collection('menu').doc('items');
 
       await db.runTransaction(async (transaction) => {
-        const doc = await transaction.get(itemsRef);
+        const doc = await transaction.get(docRef);
         let data = doc.exists ? doc.data() : {};
         let arr = Array.isArray(data[category]) ? data[category] : [];
+
         arr.push({ image: imageUrl });
-        transaction.set(itemsRef, { ...data, [category]: arr }, { merge: true });
+
+        transaction.set(docRef, { ...data, [category]: arr }, { merge: true });
       });
 
-      alert("Menu uploaded successfully ✅");
+      alert("Menu uploaded ✅");
 
-      fileInput.value = "";
+      document.getElementById('menuForm').reset();
       document.getElementById('menuImagePreview').style.display = 'none';
 
       loadMenu();
 
     } catch (err) {
-      console.error("Menu upload error:", err);
+      console.error(err);
       alert("Upload failed: " + err.message);
     }
   });
@@ -178,16 +175,12 @@ document.addEventListener('DOMContentLoaded', function() {
     e.preventDefault();
 
     try {
-      const fileInput = document.getElementById('recentImageFile');
-
-      if (fileInput.files.length === 0) return;
-
-      const file = fileInput.files[0];
+      const file = document.getElementById('recentImageFile').files[0];
+      if (!file) return;
 
       const storageRef = storage.ref('recent/' + Date.now() + '_' + file.name);
 
       await storageRef.put(file);
-
       const imageUrl = await storageRef.getDownloadURL();
 
       await db.collection('recent').add({
@@ -195,15 +188,15 @@ document.addEventListener('DOMContentLoaded', function() {
         createdAt: firebase.firestore.FieldValue.serverTimestamp()
       });
 
-      alert("Recent event uploaded ✅");
+      alert("Recent uploaded ✅");
 
-      fileInput.value = "";
+      document.getElementById('recentForm').reset();
       document.getElementById('recentImagePreview').style.display = 'none';
 
       loadRecent();
 
     } catch (err) {
-      console.error("Recent upload error:", err);
+      console.error(err);
       alert("Upload failed: " + err.message);
     }
   });
@@ -216,18 +209,16 @@ document.addEventListener('DOMContentLoaded', function() {
     menuList.innerHTML = '';
 
     const doc = await db.collection('menu').doc('items').get();
-    if (!doc.exists) {
-      menuList.innerHTML = '<li class="list-group-item">No menu found</li>';
-      return;
-    }
+    if (!doc.exists) return;
 
     const data = doc.data();
-    const categories = ['catering', 'maindishes', 'tray'];
+
+    const categories = ['catering', 'mainDishes', 'tray'];
 
     categories.forEach(cat => {
       const header = document.createElement('li');
       header.className = 'list-group-item active';
-      header.textContent = cat.toUpperCase();
+      header.textContent = cat;
       menuList.appendChild(header);
 
       const arr = Array.isArray(data[cat]) ? data[cat] : [];
@@ -248,18 +239,13 @@ document.addEventListener('DOMContentLoaded', function() {
     const recentList = document.getElementById('recentList');
     recentList.innerHTML = '';
 
-    const snap = await db.collection('recent')
-      .orderBy('createdAt', 'desc')
-      .get();
+    const snap = await db.collection('recent').orderBy('createdAt','desc').get();
 
     snap.forEach(doc => {
       const data = doc.data();
-
       const li = document.createElement('li');
       li.className = 'list-group-item';
-
       li.innerHTML = `<img src="${data.image}" style="width:80px;height:80px;object-fit:cover;">`;
-
       recentList.appendChild(li);
     });
   }
@@ -270,13 +256,12 @@ document.addEventListener('DOMContentLoaded', function() {
   document.getElementById('loginForm').addEventListener('submit', function(e) {
     e.preventDefault();
 
-    const email = document.getElementById('email').value;
-    const password = document.getElementById('password').value;
-
-    auth.signInWithEmailAndPassword(email, password)
-      .catch(err => {
-        document.getElementById('loginError').textContent = err.message;
-      });
+    auth.signInWithEmailAndPassword(
+      document.getElementById('email').value,
+      document.getElementById('password').value
+    ).catch(err => {
+      document.getElementById('loginError').textContent = err.message;
+    });
   });
 
   // LOGOUT
@@ -299,9 +284,7 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 
 });
-  console.log("Current user:", auth.currentUser);
 </script>
 
 </body>
 </html>
-
