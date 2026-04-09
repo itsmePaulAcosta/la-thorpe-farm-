@@ -1,15 +1,86 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Owner Dashboard - La Thorpe</title>
+   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+    <div class="container py-5">
+        <h2 class="mb-4">Owner Dashboard</h2>
+        <div id="login-section">
+            <h4>Login</h4>
+            <form id="loginForm">
+                <div class="mb-3">
+                    <input type="email" id="email" class="form-control" placeholder="Email" required>
+                </div>
+                <div class="mb-3">
+                    <input type="password" id="password" class="form-control" placeholder="Password" required>
+                </div>
+                <button type="submit" class="btn btn-primary">Login</button>
+            </form>
+            <div id="loginError" class="text-danger mt-2"></div>
+        </div>
+        <div id="dashboard-section" style="display:none;">
+            <button id="logoutBtn" class="btn btn-secondary mb-3">Logout</button>
+            <h4>Welcome, Owner!</h4>
+            <hr>
+            <h5>Menu Management</h5>
+            <form id="menuForm" class="mb-3">
+              <div class="row g-2">
+                <div class="col-md-4">
+                  <select id="menuCategory" class="form-control" required>
+                    <option value="catering">Catering</option>
+                    <option value="maindishes">Main Dishes</option>
+                    <option value="tray">Tray</option>
+                  </select>
+                </div>
+                <div class="col-md-5"><input type="file" id="menuImageFile" class="form-control" accept="image/*" required></div>
+                <div class="col-md-2"><img id="menuImagePreview" src="" style="width:40px;display:none;"></div>
+                <div class="col-md-1"><button type="submit" class="btn btn-success w-100">Upload</button></div>
+              </div>
+            </form>
+            <ul id="menuList" class="list-group mb-4"></ul>
+
+<h5>Recent Events Management</h5>
+<form id="recentForm" class="mb-3">
+  <div class="row g-2">
+    <div class="col-md-6">
+      <input type="file" id="recentImageFile" class="form-control" accept="image/*" required>
+    </div>
+    <div class="col-md-2">
+      <img id="recentImagePreview" src="" style="width:40px;display:none;">
+    </div>
+    <div class="col-md-2">
+      <button type="submit" class="btn btn-success w-100">Upload</button>
+    </div>
+  </div>
+</form>
+
+<ul id="recentList" class="list-group"></ul>
+        </div>
+    </div>
+
+    <!-- Firebase App (the core Firebase SDK) -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
+    <!-- Firebase Auth -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-auth-compat.js"></script>
+    <!-- Firebase Firestore -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore-compat.js"></script>
+    <!-- Firebase Storage -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-storage-compat.js"></script>
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Owner Dashboard - La Thorpe</title>
-
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
 
 <body class="bg-light">
-
 <div class="container py-5">
   <h2 class="mb-4">Owner Dashboard</h2>
 
@@ -23,7 +94,7 @@
       <div class="mb-3">
         <input type="password" id="password" class="form-control" placeholder="Password" required>
       </div>
-      <button class="btn btn-primary">Login</button>
+      <button type="submit" class="btn btn-primary">Login</button>
     </form>
     <div id="loginError" class="text-danger mt-2"></div>
   </div>
@@ -31,16 +102,15 @@
   <!-- DASHBOARD -->
   <div id="dashboard-section" style="display:none;">
     <button id="logoutBtn" class="btn btn-secondary mb-3">Logout</button>
-
     <h4>Welcome, Owner!</h4>
     <hr>
 
-    <!-- MENU UPLOAD -->
+    <!-- MENU -->
     <h5>Menu Management</h5>
     <form id="menuForm" class="mb-3">
       <div class="row g-2">
         <div class="col-md-4">
-          <select id="menuCategory" class="form-control">
+          <select id="menuCategory" class="form-control" required>
             <option value="catering">Catering</option>
             <option value="maindishes">Main Dishes</option>
             <option value="tray">Tray</option>
@@ -53,15 +123,15 @@
           <img id="menuImagePreview" style="width:40px;display:none;">
         </div>
         <div class="col-md-1">
-          <button class="btn btn-success w-100">Upload</button>
+          <button type="submit" class="btn btn-success w-100">Upload</button>
         </div>
       </div>
     </form>
 
     <ul id="menuList" class="list-group mb-4"></ul>
 
-    <!-- RECENT EVENTS -->
-    <h5>Recent Events</h5>
+    <!-- RECENT -->
+    <h5>Recent Events Management</h5>
     <form id="recentForm" class="mb-3">
       <div class="row g-2">
         <div class="col-md-6">
@@ -71,7 +141,7 @@
           <img id="recentImagePreview" style="width:40px;display:none;">
         </div>
         <div class="col-md-2">
-          <button class="btn btn-success w-100">Upload</button>
+          <button type="submit" class="btn btn-success w-100">Upload</button>
         </div>
       </div>
     </form>
@@ -80,7 +150,7 @@
   </div>
 </div>
 
-<!-- Firebase (ONLY ONCE) -->
+<!-- FIREBASE -->
 <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore-compat.js"></script>
@@ -90,7 +160,7 @@
 document.addEventListener('DOMContentLoaded', function() {
 
   const firebaseConfig = {
-    apiKey: "YOUR_API_KEY",
+    apiKey: "AIzaSyBuNw7VNAM-Do9ZkiXY5LHKVStJGRwd0Uw",
     authDomain: "menu-restaurant-268da.firebaseapp.com",
     projectId: "menu-restaurant-268da",
     storageBucket: "menu-restaurant-268da.appspot.com",
@@ -104,7 +174,7 @@ document.addEventListener('DOMContentLoaded', function() {
   const db = firebase.firestore();
   const storage = firebase.storage();
 
-  // PREVIEW IMAGE
+  // PREVIEW MENU IMAGE
   document.getElementById('menuImageFile').addEventListener('change', function(e) {
     const file = e.target.files[0];
     const preview = document.getElementById('menuImagePreview');
@@ -114,6 +184,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   });
 
+  // PREVIEW RECENT IMAGE
   document.getElementById('recentImageFile').addEventListener('change', function(e) {
     const file = e.target.files[0];
     const preview = document.getElementById('recentImagePreview');
@@ -123,110 +194,150 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   });
 
-  // MENU UPLOAD
+  // ======================
+  // MENU UPLOAD (FIXED)
+  // ======================
   document.getElementById('menuForm').addEventListener('submit', async function(e) {
     e.preventDefault();
 
     try {
       const category = document.getElementById('menuCategory').value;
-      const file = document.getElementById('menuImageFile').files[0];
+      const fileInput = document.getElementById('menuImageFile');
 
-      if (!file) return alert("Select an image");
+      if (fileInput.files.length === 0) {
+        alert("Select an image first");
+        return;
+      }
 
-      const ref = storage.ref('menu/' + Date.now() + '_' + file.name);
-      await ref.put(file);
+      const file = fileInput.files[0];
+      console.log("Uploading menu image:", file.name);
 
-      const url = await ref.getDownloadURL();
+      const storageRef = storage.ref('menu/' + Date.now() + '_' + file.name);
 
-      const docRef = db.collection('menu').doc('items');
+      await storageRef.put(file);
 
-      await db.runTransaction(async (tx) => {
-        const doc = await tx.get(docRef);
+      const imageUrl = await storageRef.getDownloadURL();
+      console.log("Download URL:", imageUrl);
+
+      const itemsRef = db.collection('menu').doc('items');
+
+      await db.runTransaction(async (transaction) => {
+        const doc = await transaction.get(itemsRef);
         let data = doc.exists ? doc.data() : {};
         let arr = Array.isArray(data[category]) ? data[category] : [];
-        arr.push({ image: url });
-        tx.set(docRef, { ...data, [category]: arr }, { merge: true });
+        arr.push({ image: imageUrl });
+        transaction.set(itemsRef, { ...data, [category]: arr }, { merge: true });
       });
 
-      alert("Uploaded ✅");
+      alert("Menu uploaded successfully ✅");
+
+      fileInput.value = "";
+      document.getElementById('menuImagePreview').style.display = 'none';
+
       loadMenu();
 
     } catch (err) {
-      console.error(err);
-      alert(err.message);
+      console.error("Menu upload error:", err);
+      alert("Upload failed: " + err.message);
     }
   });
 
+  // ======================
   // RECENT UPLOAD
+  // ======================
   document.getElementById('recentForm').addEventListener('submit', async function(e) {
     e.preventDefault();
 
     try {
-      const file = document.getElementById('recentImageFile').files[0];
-      if (!file) return;
+      const fileInput = document.getElementById('recentImageFile');
 
-      const ref = storage.ref('recent/' + Date.now() + '_' + file.name);
-      await ref.put(file);
+      if (fileInput.files.length === 0) return;
 
-      const url = await ref.getDownloadURL();
+      const file = fileInput.files[0];
+
+      const storageRef = storage.ref('recent/' + Date.now() + '_' + file.name);
+
+      await storageRef.put(file);
+
+      const imageUrl = await storageRef.getDownloadURL();
 
       await db.collection('recent').add({
-        image: url,
+        image: imageUrl,
         createdAt: firebase.firestore.FieldValue.serverTimestamp()
       });
 
-      alert("Uploaded ✅");
+      alert("Recent event uploaded ✅");
+
+      fileInput.value = "";
+      document.getElementById('recentImagePreview').style.display = 'none';
+
       loadRecent();
 
     } catch (err) {
-      console.error(err);
-      alert(err.message);
+      console.error("Recent upload error:", err);
+      alert("Upload failed: " + err.message);
     }
   });
 
+  // ======================
   // LOAD MENU
+  // ======================
   async function loadMenu() {
-    const list = document.getElementById('menuList');
-    list.innerHTML = '';
+    const menuList = document.getElementById('menuList');
+    menuList.innerHTML = '';
 
     const doc = await db.collection('menu').doc('items').get();
-    if (!doc.exists) return;
+    if (!doc.exists) {
+      menuList.innerHTML = '<li class="list-group-item">No menu found</li>';
+      return;
+    }
 
     const data = doc.data();
-    ['catering','maindishes','tray'].forEach(cat => {
+    const categories = ['catering', 'maindishes', 'tray'];
 
+    categories.forEach(cat => {
       const header = document.createElement('li');
       header.className = 'list-group-item active';
       header.textContent = cat.toUpperCase();
-      list.appendChild(header);
+      menuList.appendChild(header);
 
-      (data[cat] || []).forEach(item => {
+      const arr = Array.isArray(data[cat]) ? data[cat] : [];
+
+      arr.forEach(item => {
         const li = document.createElement('li');
         li.className = 'list-group-item';
         li.innerHTML = `<img src="${item.image}" style="width:60px;height:60px;object-fit:cover;">`;
-        list.appendChild(li);
+        menuList.appendChild(li);
       });
-
     });
   }
 
+  // ======================
   // LOAD RECENT
+  // ======================
   async function loadRecent() {
-    const list = document.getElementById('recentList');
-    list.innerHTML = '';
+    const recentList = document.getElementById('recentList');
+    recentList.innerHTML = '';
 
-    const snap = await db.collection('recent').orderBy('createdAt','desc').get();
+    const snap = await db.collection('recent')
+      .orderBy('createdAt', 'desc')
+      .get();
 
     snap.forEach(doc => {
       const data = doc.data();
+
       const li = document.createElement('li');
       li.className = 'list-group-item';
+
       li.innerHTML = `<img src="${data.image}" style="width:80px;height:80px;object-fit:cover;">`;
-      list.appendChild(li);
+
+      recentList.appendChild(li);
     });
   }
 
+  // ======================
   // LOGIN
+  // ======================
   document.getElementById('loginForm').addEventListener('submit', function(e) {
     e.preventDefault();
 
@@ -249,6 +360,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (user) {
       document.getElementById('login-section').style.display = 'none';
       document.getElementById('dashboard-section').style.display = 'block';
+
       loadMenu();
       loadRecent();
     } else {
@@ -262,3 +374,5 @@ document.addEventListener('DOMContentLoaded', function() {
 
 </body>
 </html>
+</body>
+</html> 
