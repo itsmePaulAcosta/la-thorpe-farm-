@@ -149,11 +149,59 @@
             data[cat].forEach((item, idx) => {
               const li = document.createElement('li');
               li.className = 'list-group-item d-flex justify-content-between align-items-center';
-              li.innerHTML = `<span><span class='badge bg-primary me-2'>${cat}</span><img src="${item.image}" alt="" style="width:60px;height:60px;object-fit:cover;margin-right:10px;"></span><button class="btn btn-danger btn-sm" onclick="deleteMenu('${cat}',${idx})">Delete</button>`;
+              li.innerHTML = `
+                <span>
+                  <span class='badge bg-primary me-2'>${cat}</span>
+                  <img src="${item.image}" alt="" style="width:60px;height:60px;object-fit:cover;margin-right:10px;">
+                </span>
+                <span>
+                  <button class="btn btn-warning btn-sm me-2" onclick="showEditMenuImage('${cat}',${idx},'${item.image.replace(/'/g, "\\'")}')">Edit</button>
+                  <button class="btn btn-danger btn-sm" onclick="deleteMenu('${cat}',${idx})">Delete</button>
+                </span>
+                <span id="edit-menu-image-${cat}-${idx}" style="display:none;">
+                  <input type="file" accept="image/*" id="editMenuImageInput-${cat}-${idx}" style="display:inline-block;width:auto;">
+                  <button class="btn btn-success btn-sm" onclick="updateMenuImage('${cat}',${idx})">Save</button>
+                  <button class="btn btn-secondary btn-sm" onclick="cancelEditMenuImage('${cat}',${idx})">Cancel</button>
+                </span>
+              `;
               menuList.appendChild(li);
             });
           }
         });
+      }
+
+      // Show edit image input for a menu item
+      window.showEditMenuImage = function(category, idx, imageUrl) {
+        const editDiv = document.getElementById(`edit-menu-image-${category}-${idx}`);
+        if (editDiv) editDiv.style.display = 'inline-block';
+      }
+
+      // Cancel edit image input
+      window.cancelEditMenuImage = function(category, idx) {
+        const editDiv = document.getElementById(`edit-menu-image-${category}-${idx}`);
+        if (editDiv) editDiv.style.display = 'none';
+      }
+
+      // Update menu image for a specific item
+      window.updateMenuImage = async function(category, idx) {
+        const input = document.getElementById(`editMenuImageInput-${category}-${idx}`);
+        if (!input || input.files.length === 0) return;
+        const file = input.files[0];
+        const storageRef = storage.ref('menu/' + Date.now() + '_' + file.name);
+        await storageRef.put(file);
+        const imageUrl = await storageRef.getDownloadURL();
+        // Update Firestore array
+        const itemsRef = db.collection('menu').doc('items');
+        await db.runTransaction(async (transaction) => {
+          const doc = await transaction.get(itemsRef);
+          let data = doc.exists ? doc.data() : {};
+          let arr = Array.isArray(data[category]) ? data[category] : [];
+          if (arr[idx]) {
+            arr[idx].image = imageUrl;
+          }
+          transaction.set(itemsRef, { ...data, [category]: arr }, { merge: true });
+        });
+        loadMenu();
       }
 
       window.deleteMenu = async function(category, idx) {
