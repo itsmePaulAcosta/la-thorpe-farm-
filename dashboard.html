@@ -29,9 +29,16 @@
             <h5>Menu Management</h5>
             <form id="menuForm" class="mb-3">
               <div class="row g-2">
-                <div class="col-md-4"><input type="text" id="menuName" class="form-control" placeholder="Dish Name" required></div>
-                <div class="col-md-3"><input type="number" id="menuPrice" class="form-control" placeholder="Price" required></div>
+                <div class="col-md-3"><input type="text" id="menuName" class="form-control" placeholder="Dish Name" required></div>
+                <div class="col-md-2"><input type="number" id="menuPrice" class="form-control" placeholder="Price" required></div>
                 <div class="col-md-4"><input type="text" id="menuImage" class="form-control" placeholder="Image URL" required></div>
+                <div class="col-md-2">
+                  <select id="menuCategory" class="form-control" required>
+                    <option value="catering">Catering</option>
+                    <option value="maindishes">Main Dishes</option>
+                    <option value="tray">Tray</option>
+                  </select>
+                </div>
                 <div class="col-md-1"><button type="submit" class="btn btn-success w-100">Add</button></div>
               </div>
             </form>
@@ -59,35 +66,60 @@
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore-compat.js"></script>
 
     <script>
+
           // Firestore
           const db = firebase.firestore();
 
-          // MENU CRUD
+          // MENU CRUD (with nested structure)
           const menuForm = document.getElementById('menuForm');
           const menuList = document.getElementById('menuList');
+
           menuForm.addEventListener('submit', async function(e) {
             e.preventDefault();
             const name = document.getElementById('menuName').value;
             const price = parseFloat(document.getElementById('menuPrice').value);
             const image = document.getElementById('menuImage').value;
-            await db.collection('menu').add({ name, price, image });
+            const category = document.getElementById('menuCategory').value;
+            const item = { name, price, image };
+            const itemsRef = db.collection('menu').doc('items');
+            await db.runTransaction(async (transaction) => {
+              const doc = await transaction.get(itemsRef);
+              let data = doc.exists ? doc.data() : {};
+              let arr = Array.isArray(data[category]) ? data[category] : [];
+              arr.push(item);
+              transaction.set(itemsRef, { ...data, [category]: arr }, { merge: true });
+            });
             menuForm.reset();
             loadMenu();
           });
 
           async function loadMenu() {
             menuList.innerHTML = '';
-            const snap = await db.collection('menu').orderBy('name').get();
-            snap.forEach(doc => {
-              const li = document.createElement('li');
-              li.className = 'list-group-item d-flex justify-content-between align-items-center';
-              li.innerHTML = `<span><img src="${doc.data().image}" alt="" style="width:40px;height:40px;object-fit:cover;margin-right:10px;"> <strong>${doc.data().name}</strong> - ₱${doc.data().price}</span><button class="btn btn-danger btn-sm" onclick="deleteMenu('${doc.id}')">Delete</button>`;
-              menuList.appendChild(li);
+            const doc = await db.collection('menu').doc('items').get();
+            if (!doc.exists) return;
+            const data = doc.data();
+            const categories = ['catering', 'maindishes', 'tray'];
+            categories.forEach(cat => {
+              if (Array.isArray(data[cat])) {
+                data[cat].forEach((item, idx) => {
+                  const li = document.createElement('li');
+                  li.className = 'list-group-item d-flex justify-content-between align-items-center';
+                  li.innerHTML = `<span><span class='badge bg-primary me-2'>${cat}</span><img src="${item.image}" alt="" style="width:40px;height:40px;object-fit:cover;margin-right:10px;"> <strong>${item.name}</strong> - ₱${item.price}</span><button class="btn btn-danger btn-sm" onclick="deleteMenu('${cat}',${idx})">Delete</button>`;
+                  menuList.appendChild(li);
+                });
+              }
             });
           }
 
-          window.deleteMenu = async function(id) {
-            await db.collection('menu').doc(id).delete();
+          window.deleteMenu = async function(category, idx) {
+            const itemsRef = db.collection('menu').doc('items');
+            await db.runTransaction(async (transaction) => {
+              const doc = await transaction.get(itemsRef);
+              let data = doc.exists ? doc.data() : {};
+              let arr = Array.isArray(data[category]) ? data[category] : [];
+              arr.splice(idx, 1);
+              transaction.set(itemsRef, { ...data, [category]: arr }, { merge: true });
+            });
             loadMenu();
           }
 
