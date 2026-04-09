@@ -146,10 +146,12 @@
           return;
         }
         const data = doc.data();
+        console.log('Firestore menu/items data:', data);
         const categories = ['catering', 'maindishes', 'tray'];
         let hasAny = false;
         categories.forEach(cat => {
           const arr = Array.isArray(data[cat]) ? data[cat] : [];
+          console.log('Category', cat, 'images:', arr);
           // Add category header
           const header = document.createElement('li');
           header.className = 'list-group-item active';
