@@ -69,7 +69,7 @@
 
     <script>
 
-    function startDashboard() {
+    document.addEventListener('DOMContentLoaded', function() {
       // Your web app's Firebase configuration
       const firebaseConfig = {
         apiKey: "AIzaSyBuNw7VNAM-Do9ZkiXY5LHKVStJGRwd0Uw",
@@ -146,12 +146,10 @@
           return;
         }
         const data = doc.data();
-        console.log('Firestore menu/items data:', data);
         const categories = ['catering', 'maindishes', 'tray'];
         let hasAny = false;
         categories.forEach(cat => {
           const arr = Array.isArray(data[cat]) ? data[cat] : [];
-          console.log('Category', cat, 'images:', arr);
           // Add category header
           const header = document.createElement('li');
           header.className = 'list-group-item active';
@@ -305,20 +303,14 @@
         if (user) {
           document.getElementById('login-section').style.display = 'none';
           document.getElementById('dashboard-section').style.display = 'block';
-          setTimeout(loadMenu, 100); // Ensure DOM is ready
-          setTimeout(loadRecent, 100);
+          loadMenu();
+          loadRecent();
         } else {
           document.getElementById('login-section').style.display = 'block';
           document.getElementById('dashboard-section').style.display = 'none';
         }
       });
-    }
-
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', startDashboard);
-    } else {
-      startDashboard();
-    }
+    });
     </script>
 </body>
 </html>
