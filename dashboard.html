@@ -66,6 +66,45 @@ window.uploadImage = async function () {
     alert("Upload failed");
   }
 };
+
+
+  window.uploadImage = async function () {
+  const file = document.getElementById("fileInput").files[0];
+  const category = document.getElementById("category").value;
+
+  if (!file) {
+    alert("No file selected");
+    return;
+  }
+
+  try {
+    console.log("File:", file);
+    console.log("Category:", category);
+
+    const storageRef = ref(storage, `${category}/${Date.now()}_${file.name}`);
+
+    console.log("Uploading to Storage...");
+
+    const snapshot = await uploadBytes(storageRef, file);
+
+    console.log("Upload complete");
+
+    const url = await getDownloadURL(snapshot.ref);
+
+    console.log("Download URL:", url);
+
+    await addDoc(collection(db, "menu"), {
+      imageUrl: url,
+      category: category,
+      createdAt: new Date()
+    });
+
+    alert("Upload successful!");
+  } catch (error) {
+    console.error("FULL ERROR:", error);
+    alert(error.message);
+  }
+};
 </script>
 
 </body>
