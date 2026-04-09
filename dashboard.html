@@ -67,258 +67,147 @@
     <!-- Firebase Storage -->
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-storage-compat.js"></script>
 
-    <script>
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyBuNw7VNAM-Do9ZkiXY5LHKVStJGRwd0Uw",
+  authDomain: "menu-restaurant-268da.firebaseapp.com",
+  projectId: "menu-restaurant-268da",
+  storageBucket: "menu-restaurant-268da.firebasestorage.app",
+  messagingSenderId: "1060452948086",
+  appId: "1:1060452948086:web:9009a4570c15f334a02757"
+};
 
-    function startDashboard() {
-      // Your web app's Firebase configuration
-      const firebaseConfig = {
-        apiKey: "AIzaSyBuNw7VNAM-Do9ZkiXY5LHKVStJGRwd0Uw",
-        authDomain: "menu-restaurant-268da.firebaseapp.com",
-        projectId: "menu-restaurant-268da",
-        storageBucket: "menu-restaurant-268da.firebasestorage.app",
-        messagingSenderId: "1060452948086",
-        appId: "1:1060452948086:web:9009a4570c15f334a02757"
-      };
-      // Initialize Firebase
-      firebase.initializeApp(firebaseConfig);
-      const auth = firebase.auth();
-      const db = firebase.firestore();
-      const storage = firebase.storage();
+firebase.initializeApp(firebaseConfig);
 
-      // Image preview for menu
-      document.getElementById('menuImageFile').addEventListener('change', function(e) {
-        const file = e.target.files[0];
-        const preview = document.getElementById('menuImagePreview');
-        if (file) {
-          preview.src = URL.createObjectURL(file);
-          preview.style.display = 'inline-block';
-        } else {
-          preview.src = '';
-          preview.style.display = 'none';
-        }
-      });
+const db = firebase.firestore();
+const storage = firebase.storage();
 
-      // Image preview for recent
-      document.getElementById('recentImageFile').addEventListener('change', function(e) {
-        const file = e.target.files[0];
-        const preview = document.getElementById('recentImagePreview');
-        if (file) {
-          preview.src = URL.createObjectURL(file);
-          preview.style.display = 'inline-block';
-        } else {
-          preview.src = '';
-          preview.style.display = 'none';
-        }
-      });
+const menuForm = document.getElementById('menuForm');
+const menuList = document.getElementById('menuList');
 
-      // MENU CRUD (with nested structure)
-      const menuForm = document.getElementById('menuForm');
-      const menuList = document.getElementById('menuList');
+// ✅ UPLOAD MENU IMAGE WITH ID
+menuForm.addEventListener('submit', async function(e) {
+  e.preventDefault();
 
-      menuForm.addEventListener('submit', async function(e) {
-        e.preventDefault();
-        const category = document.getElementById('menuCategory').value;
-        const fileInput = document.getElementById('menuImageFile');
-        if (fileInput.files.length === 0) return;
-        const file = fileInput.files[0];
-        const storageRef = storage.ref('menu/' + Date.now() + '_' + file.name);
-        await storageRef.put(file);
-        const imageUrl = await storageRef.getDownloadURL();
-        // Add image to Firestore (no name/price)
-        const itemsRef = db.collection('menu').doc('items');
-        await db.runTransaction(async (transaction) => {
-          const doc = await transaction.get(itemsRef);
-          let data = doc.exists ? doc.data() : {};
-          let arr = Array.isArray(data[category]) ? data[category] : [];
-          arr.push({ image: imageUrl });
-          transaction.set(itemsRef, { ...data, [category]: arr }, { merge: true });
-        });
-        menuForm.reset();
-        document.getElementById('menuImagePreview').style.display = 'none';
-        loadMenu();
-      });
+  const category = document.getElementById('menuCategory').value;
+  const file = document.getElementById('menuImageFile').files[0];
+  if (!file) return;
 
-      async function loadMenu() {
-        menuList.innerHTML = '';
-        const doc = await db.collection('menu').doc('items').get();
-        if (!doc.exists) {
-          menuList.innerHTML = '<li class="list-group-item">No menu images found.</li>';
-          return;
-        }
-        const data = doc.data();
-        console.log('Firestore menu/items data:', data);
-        const categories = ['catering', 'maindishes', 'tray'];
-        let hasAny = false;
-        categories.forEach(cat => {
-          const arr = Array.isArray(data[cat]) ? data[cat] : [];
-          console.log('Category', cat, 'images:', arr);
-          // Add category header
-          const header = document.createElement('li');
-          header.className = 'list-group-item active';
-          header.textContent = cat.charAt(0).toUpperCase() + cat.slice(1);
-          menuList.appendChild(header);
-          if (arr.length === 0) {
-            const emptyLi = document.createElement('li');
-            emptyLi.className = 'list-group-item';
-            emptyLi.textContent = 'No images.';
-            menuList.appendChild(emptyLi);
-          } else {
-            hasAny = true;
-            arr.forEach((item, idx) => {
-              // Unique key for edit controls
-              const key = cat + '-' + idx;
-              const li = document.createElement('li');
-              li.className = 'list-group-item d-flex justify-content-between align-items-center';
-              li.innerHTML = `
-                <span>
-                  <span class="badge bg-secondary me-2">#${idx + 1}</span>
-                  <img src="${item.image}" alt="Menu Image" style="width:60px;height:60px;object-fit:cover;margin-right:10px;vertical-align:middle;">
-                </span>
-                <span>
-                  <button class="btn btn-warning btn-sm me-2" onclick="showEditMenuImage('${key}')">Edit</button>
-                  <button class="btn btn-danger btn-sm" onclick="deleteMenu('${cat}',${idx})">Delete</button>
-                </span>
-                <span id="edit-menu-image-${key}" style="display:none;">
-                  <input type="file" accept="image/*" id="editMenuImageInput-${key}" style="display:inline-block;width:auto;">
-                  <button class="btn btn-success btn-sm" onclick="updateMenuImage('${cat}',${idx},'${key}')">Save</button>
-                  <button class="btn btn-secondary btn-sm" onclick="cancelEditMenuImage('${key}')">Cancel</button>
-                </span>
-              `;
-              menuList.appendChild(li);
-            });
-          }
-        });
-        // Only show the fallback if ALL categories are empty
-        if (!categories.some(cat => Array.isArray(data[cat]) && data[cat].length > 0)) {
-          menuList.innerHTML = '<li class="list-group-item">No menu images found.</li>';
-        }
+  const storageRef = storage.ref('menu/' + Date.now() + '_' + file.name);
+  await storageRef.put(file);
+  const imageUrl = await storageRef.getDownloadURL();
+
+  const itemsRef = db.collection('menu').doc('items');
+
+  await db.runTransaction(async (transaction) => {
+    const doc = await transaction.get(itemsRef);
+    let data = doc.exists ? doc.data() : {};
+    let arr = Array.isArray(data[category]) ? data[category] : [];
+
+    arr.push({
+      id: Date.now().toString(),
+      image: imageUrl
+    });
+
+    transaction.set(itemsRef, { ...data, [category]: arr }, { merge: true });
+  });
+
+  menuForm.reset();
+  loadMenu();
+});
+
+// ✅ LOAD MENU (WITH EDIT BUTTON)
+async function loadMenu() {
+  menuList.innerHTML = '';
+
+  const doc = await db.collection('menu').doc('items').get();
+  if (!doc.exists) return;
+
+  const data = doc.data();
+  const categories = ['catering', 'maindishes', 'tray'];
+
+  categories.forEach(cat => {
+    const arr = data[cat] || [];
+
+    const header = document.createElement('li');
+    header.className = 'list-group-item active';
+    header.textContent = cat.toUpperCase();
+    menuList.appendChild(header);
+
+    arr.forEach(item => {
+      const li = document.createElement('li');
+      li.className = 'list-group-item';
+
+      li.innerHTML = `
+        <img src="${item.image}" style="width:60px;height:60px;object-fit:cover;">
+        
+        <input type="file" data-id="${item.id}" class="form-control my-2">
+
+        <button class="btn btn-success btn-sm"
+          onclick="updateMenuImage('${cat}','${item.id}')">
+          Update
+        </button>
+
+        <button class="btn btn-danger btn-sm"
+          onclick="deleteMenu('${cat}','${item.id}')">
+          Delete
+        </button>
+      `;
+
+      menuList.appendChild(li);
+    });
+  });
+}
+
+// ✅ UPDATE IMAGE USING ID
+window.updateMenuImage = async function(category, id) {
+  const input = document.querySelector(`[data-id="${id}"]`);
+  if (!input || input.files.length === 0) return;
+
+  const file = input.files[0];
+  const storageRef = storage.ref('menu/' + Date.now() + '_' + file.name);
+
+  await storageRef.put(file);
+  const imageUrl = await storageRef.getDownloadURL();
+
+  const itemsRef = db.collection('menu').doc('items');
+
+  await db.runTransaction(async (transaction) => {
+    const doc = await transaction.get(itemsRef);
+    let data = doc.data();
+    let arr = data[category] || [];
+
+    arr = arr.map(item => {
+      if (item.id === id) {
+        return { ...item, image: imageUrl };
       }
+      return item;
+    });
 
-      // Show edit image input for a menu item
-      window.showEditMenuImage = function(key) {
-        const editDiv = document.getElementById(`edit-menu-image-${key}`);
-        if (editDiv) editDiv.style.display = 'inline-block';
-      }
+    transaction.set(itemsRef, { ...data, [category]: arr }, { merge: true });
+  });
 
-      window.cancelEditMenuImage = function(key) {
-        const editDiv = document.getElementById(`edit-menu-image-${key}`);
-        if (editDiv) editDiv.style.display = 'none';
-      }
+  loadMenu();
+};
 
-      window.updateMenuImage = async function(category, idx, key) {
-        const input = document.getElementById(`editMenuImageInput-${key}`);
-        if (!input || input.files.length === 0) return;
-        const file = input.files[0];
-        const storageRef = storage.ref('menu/' + Date.now() + '_' + file.name);
-        await storageRef.put(file);
-        const imageUrl = await storageRef.getDownloadURL();
-        // Update Firestore array
-        const itemsRef = db.collection('menu').doc('items');
-        await db.runTransaction(async (transaction) => {
-          const doc = await transaction.get(itemsRef);
-          let data = doc.exists ? doc.data() : {};
-          let arr = Array.isArray(data[category]) ? data[category] : [];
-          if (arr[idx]) {
-            arr[idx].image = imageUrl;
-          }
-          transaction.set(itemsRef, { ...data, [category]: arr }, { merge: true });
-        });
-        loadMenu();
-      }
+// ✅ DELETE USING ID
+window.deleteMenu = async function(category, id) {
+  const itemsRef = db.collection('menu').doc('items');
 
-      window.deleteMenu = async function(category, idx) {
-        const itemsRef = db.collection('menu').doc('items');
-        await db.runTransaction(async (transaction) => {
-          const doc = await transaction.get(itemsRef);
-          let data = doc.exists ? doc.data() : {};
-          let arr = Array.isArray(data[category]) ? data[category] : [];
-          arr.splice(idx, 1);
-          transaction.set(itemsRef, { ...data, [category]: arr }, { merge: true });
-        });
-        loadMenu();
-      }
+  await db.runTransaction(async (transaction) => {
+    const doc = await transaction.get(itemsRef);
+    let data = doc.data();
+    let arr = data[category] || [];
 
-      // RECENT EVENTS CRUD
-      const recentForm = document.getElementById('recentForm');
-      const recentList = document.getElementById('recentList');
-      recentForm.addEventListener('submit', async function(e) {
-        e.preventDefault();
-        const title = document.getElementById('recentTitle').value;
-        const date = document.getElementById('recentDate').value;
-        const description = document.getElementById('recentDesc').value;
-        const fileInput = document.getElementById('recentImageFile');
-        let imageUrl = '';
-        if (fileInput.files.length > 0) {
-          const file = fileInput.files[0];
-          const storageRef = storage.ref('recent/' + Date.now() + '_' + file.name);
-          await storageRef.put(file);
-          imageUrl = await storageRef.getDownloadURL();
-        }
-        await db.collection('recent').add({ title, image: imageUrl, date, description });
-        recentForm.reset();
-        document.getElementById('recentImagePreview').style.display = 'none';
-        loadRecent();
-      });
+    arr = arr.filter(item => item.id !== id);
 
-      async function loadRecent() {
-        recentList.innerHTML = '';
-        const snap = await db.collection('recent').orderBy('date', 'desc').get();
-        snap.forEach(doc => {
-          const li = document.createElement('li');
-          li.className = 'list-group-item d-flex justify-content-between align-items-center';
-          li.innerHTML = `<span><img src="${doc.data().image}" alt="" style="width:40px;height:40px;object-fit:cover;margin-right:10px;"> <strong>${doc.data().title}</strong> (${doc.data().date}) - ${doc.data().description}</span><button class="btn btn-danger btn-sm" onclick="deleteRecent('${doc.id}')">Delete</button>`;
-          recentList.appendChild(li);
-        });
-      }
+    transaction.set(itemsRef, { ...data, [category]: arr }, { merge: true });
+  });
 
-      window.deleteRecent = async function(id) {
-        await db.collection('recent').doc(id).delete();
-        loadRecent();
-      }
+  loadMenu();
+};
 
-      // Login logic
-      document.getElementById('loginForm').addEventListener('submit', function(e) {
-        e.preventDefault();
-        const email = document.getElementById('email').value;
-        const password = document.getElementById('password').value;
-        auth.signInWithEmailAndPassword(email, password)
-          .then(() => {
-            document.getElementById('login-section').style.display = 'none';
-            document.getElementById('dashboard-section').style.display = 'block';
-            document.getElementById('loginError').textContent = '';
-          })
-          .catch(err => {
-            document.getElementById('loginError').textContent = err.message;
-          });
-      });
-
-      // Logout logic
-      document.getElementById('logoutBtn').addEventListener('click', function() {
-        auth.signOut().then(() => {
-          document.getElementById('login-section').style.display = 'block';
-          document.getElementById('dashboard-section').style.display = 'none';
-        });
-      });
-
-      // Auth state listener
-      auth.onAuthStateChanged(user => {
-        if (user) {
-          document.getElementById('login-section').style.display = 'none';
-          document.getElementById('dashboard-section').style.display = 'block';
-          setTimeout(loadMenu, 100); // Ensure DOM is ready
-          setTimeout(loadRecent, 100);
-        } else {
-          document.getElementById('login-section').style.display = 'block';
-          document.getElementById('dashboard-section').style.display = 'none';
-        }
-      });
-    }
-
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', startDashboard);
-    } else {
-      startDashboard();
-    }
-    </script>
+loadMenu();
+</script>
 </body>
 </html>
