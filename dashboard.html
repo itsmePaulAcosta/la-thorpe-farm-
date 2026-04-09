@@ -183,7 +183,8 @@
             });
           }
         });
-        if (!hasAny) {
+        // Only show the fallback if ALL categories are empty
+        if (!categories.some(cat => Array.isArray(data[cat]) && data[cat].length > 0)) {
           menuList.innerHTML = '<li class="list-group-item">No menu images found.</li>';
         }
       }
