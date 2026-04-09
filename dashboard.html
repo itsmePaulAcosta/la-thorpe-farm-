@@ -1,5 +1,3 @@
-
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -45,12 +43,15 @@
             <option value="tray">Tray</option>
           </select>
         </div>
+
         <div class="col-md-5">
           <input type="file" id="menuImageFile" class="form-control" accept="image/*" required>
         </div>
+
         <div class="col-md-2">
           <img id="menuImagePreview" style="width:40px;display:none;">
         </div>
+
         <div class="col-md-1">
           <button type="submit" class="btn btn-success w-100">Upload</button>
         </div>
@@ -59,23 +60,6 @@
 
     <ul id="menuList" class="list-group mb-4"></ul>
 
-    <!-- RECENT -->
-    <h5>Recent Events Management</h5>
-    <form id="recentForm" class="mb-3">
-      <div class="row g-2">
-        <div class="col-md-6">
-          <input type="file" id="recentImageFile" class="form-control" accept="image/*" required>
-        </div>
-        <div class="col-md-2">
-          <img id="recentImagePreview" style="width:40px;display:none;">
-        </div>
-        <div class="col-md-2">
-          <button type="submit" class="btn btn-success w-100">Upload</button>
-        </div>
-      </div>
-    </form>
-
-    <ul id="recentList" class="list-group"></ul>
   </div>
 </div>
 
@@ -103,20 +87,13 @@ document.addEventListener('DOMContentLoaded', function() {
   const db = firebase.firestore();
   const storage = firebase.storage();
 
-  // PREVIEW MENU IMAGE
+  // ======================
+  // PREVIEW IMAGE
+  // ======================
   document.getElementById('menuImageFile').addEventListener('change', function(e) {
     const file = e.target.files[0];
     const preview = document.getElementById('menuImagePreview');
-    if (file) {
-      preview.src = URL.createObjectURL(file);
-      preview.style.display = 'inline-block';
-    }
-  });
 
-  // PREVIEW RECENT IMAGE
-  document.getElementById('recentImageFile').addEventListener('change', function(e) {
-    const file = e.target.files[0];
-    const preview = document.getElementById('recentImagePreview');
     if (file) {
       preview.src = URL.createObjectURL(file);
       preview.style.display = 'inline-block';
@@ -124,7 +101,7 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 
   // ======================
-  // MENU UPLOAD (FIXED)
+  // MENU UPLOAD
   // ======================
   document.getElementById('menuForm').addEventListener('submit', async function(e) {
     e.preventDefault();
@@ -139,22 +116,23 @@ document.addEventListener('DOMContentLoaded', function() {
       }
 
       const file = fileInput.files[0];
-      console.log("Uploading menu image:", file.name);
 
       const storageRef = storage.ref('menu/' + Date.now() + '_' + file.name);
 
       await storageRef.put(file);
 
       const imageUrl = await storageRef.getDownloadURL();
-      console.log("Download URL:", imageUrl);
 
       const itemsRef = db.collection('menu').doc('items');
 
       await db.runTransaction(async (transaction) => {
         const doc = await transaction.get(itemsRef);
         let data = doc.exists ? doc.data() : {};
+
         let arr = Array.isArray(data[category]) ? data[category] : [];
+
         arr.push({ image: imageUrl });
+
         transaction.set(itemsRef, { ...data, [category]: arr }, { merge: true });
       });
 
@@ -166,44 +144,7 @@ document.addEventListener('DOMContentLoaded', function() {
       loadMenu();
 
     } catch (err) {
-      console.error("Menu upload error:", err);
-      alert("Upload failed: " + err.message);
-    }
-  });
-
-  // ======================
-  // RECENT UPLOAD
-  // ======================
-  document.getElementById('recentForm').addEventListener('submit', async function(e) {
-    e.preventDefault();
-
-    try {
-      const fileInput = document.getElementById('recentImageFile');
-
-      if (fileInput.files.length === 0) return;
-
-      const file = fileInput.files[0];
-
-      const storageRef = storage.ref('recent/' + Date.now() + '_' + file.name);
-
-      await storageRef.put(file);
-
-      const imageUrl = await storageRef.getDownloadURL();
-
-      await db.collection('recent').add({
-        image: imageUrl,
-        createdAt: firebase.firestore.FieldValue.serverTimestamp()
-      });
-
-      alert("Recent event uploaded ✅");
-
-      fileInput.value = "";
-      document.getElementById('recentImagePreview').style.display = 'none';
-
-      loadRecent();
-
-    } catch (err) {
-      console.error("Recent upload error:", err);
+      console.error(err);
       alert("Upload failed: " + err.message);
     }
   });
@@ -216,13 +157,15 @@ document.addEventListener('DOMContentLoaded', function() {
     menuList.innerHTML = '';
 
     const doc = await db.collection('menu').doc('items').get();
+
     if (!doc.exists) {
       menuList.innerHTML = '<li class="list-group-item">No menu found</li>';
       return;
     }
 
     const data = doc.data();
-    const categories = ['catering', 'mainDishes', 'tray'];
+
+    const categories = ['catering', 'maindishes', 'tray'];
 
     categories.forEach(cat => {
       const header = document.createElement('li');
@@ -238,29 +181,6 @@ document.addEventListener('DOMContentLoaded', function() {
         li.innerHTML = `<img src="${item.image}" style="width:60px;height:60px;object-fit:cover;">`;
         menuList.appendChild(li);
       });
-    });
-  }
-
-  // ======================
-  // LOAD RECENT
-  // ======================
-  async function loadRecent() {
-    const recentList = document.getElementById('recentList');
-    recentList.innerHTML = '';
-
-    const snap = await db.collection('recent')
-      .orderBy('createdAt', 'desc')
-      .get();
-
-    snap.forEach(doc => {
-      const data = doc.data();
-
-      const li = document.createElement('li');
-      li.className = 'list-group-item';
-
-      li.innerHTML = `<img src="${data.image}" style="width:80px;height:80px;object-fit:cover;">`;
-
-      recentList.appendChild(li);
     });
   }
 
@@ -291,7 +211,6 @@ document.addEventListener('DOMContentLoaded', function() {
       document.getElementById('dashboard-section').style.display = 'block';
 
       loadMenu();
-      loadRecent();
     } else {
       document.getElementById('login-section').style.display = 'block';
       document.getElementById('dashboard-section').style.display = 'none';
@@ -299,8 +218,7 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 
 });
-  console.log("Current user:", auth.currentUser);
 </script>
 
 </body>
-</html> 
+</html>
