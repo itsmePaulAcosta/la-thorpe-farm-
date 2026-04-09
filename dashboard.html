@@ -71,270 +71,308 @@
     <!-- Firebase Storage -->
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-storage-compat.js"></script>
 
-    <script>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Owner Dashboard - La Thorpe</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
 
-    document.addEventListener('DOMContentLoaded', function() {
-      // Your web app's Firebase configuration
-      const firebaseConfig = {
-        apiKey: "AIzaSyBuNw7VNAM-Do9ZkiXY5LHKVStJGRwd0Uw",
-        authDomain: "menu-restaurant-268da.firebaseapp.com",
-        projectId: "menu-restaurant-268da",
-        storageBucket: "menu-restaurant-268da.appspot.com",
-        messagingSenderId: "1060452948086",
-        appId: "1:1060452948086:web:9009a4570c15f334a02757"
-      };
-      // Initialize Firebase
-      firebase.initializeApp(firebaseConfig);
-      const auth = firebase.auth();
-      const db = firebase.firestore();
-      const storage = firebase.storage();
+<body class="bg-light">
+<div class="container py-5">
+  <h2 class="mb-4">Owner Dashboard</h2>
 
-      // Image preview for menu
-      document.getElementById('menuImageFile').addEventListener('change', function(e) {
-        const file = e.target.files[0];
-        const preview = document.getElementById('menuImagePreview');
-        if (file) {
-          preview.src = URL.createObjectURL(file);
-          preview.style.display = 'inline-block';
-        } else {
-          preview.src = '';
-          preview.style.display = 'none';
-        }
-      });
-
-      // Image preview for recent
-      document.getElementById('recentImageFile').addEventListener('change', function(e) {
-        const file = e.target.files[0];
-        const preview = document.getElementById('recentImagePreview');
-        if (file) {
-          preview.src = URL.createObjectURL(file);
-          preview.style.display = 'inline-block';
-        } else {
-          preview.src = '';
-          preview.style.display = 'none';
-        }
-      });
-
-      // MENU CRUD (with nested structure)
-      const menuForm = document.getElementById('menuForm');
-      const menuList = document.getElementById('menuList');
-
-      menuForm.addEventListener('submit', async function(e) {
-        e.preventDefault();
-        const category = document.getElementById('menuCategory').value;
-        const fileInput = document.getElementById('menuImageFile');
-        if (fileInput.files.length === 0) return;
-        const file = fileInput.files[0];
-        const storageRef = storage.ref('menu/' + Date.now() + '_' + file.name);
-        await storageRef.put(file);
-        const imageUrl = await storageRef.getDownloadURL();
-        // Add image to Firestore (no name/price)
-        const itemsRef = db.collection('menu').doc('items');
-        await db.runTransaction(async (transaction) => {
-          const doc = await transaction.get(itemsRef);
-          let data = doc.exists ? doc.data() : {};
-          let arr = Array.isArray(data[category]) ? data[category] : [];
-          arr.push({ image: imageUrl });
-          transaction.set(itemsRef, { ...data, [category]: arr }, { merge: true });
-        });
-        menuForm.reset();
-        document.getElementById('menuImagePreview').style.display = 'none';
-        loadMenu();
-      });
-
-      async function loadMenu() {
-        menuList.innerHTML = '';
-        const doc = await db.collection('menu').doc('items').get();
-        if (!doc.exists) {
-          menuList.innerHTML = '<li class="list-group-item">No menu images found.</li>';
-          return;
-        }
-        const data = doc.data();
-        const categories = ['catering', 'maindishes', 'tray'];
-        let hasAny = false;
-        categories.forEach(cat => {
-          const arr = Array.isArray(data[cat]) ? data[cat] : [];
-          // Add category header
-          const header = document.createElement('li');
-          header.className = 'list-group-item active';
-          header.textContent = cat.charAt(0).toUpperCase() + cat.slice(1);
-          menuList.appendChild(header);
-          if (arr.length === 0) {
-            const emptyLi = document.createElement('li');
-            emptyLi.className = 'list-group-item';
-            emptyLi.textContent = 'No images.';
-            menuList.appendChild(emptyLi);
-          } else {
-            hasAny = true;
-            arr.forEach((item, idx) => {
-              // Unique key for edit controls
-              const key = cat + '-' + idx;
-              const li = document.createElement('li');
-              li.className = 'list-group-item d-flex justify-content-between align-items-center';
-              li.innerHTML = `
-                <span>
-                  <span class="badge bg-secondary me-2">#${idx + 1}</span>
-                  <img src="${item.image}" alt="Menu Image" style="width:60px;height:60px;object-fit:cover;margin-right:10px;vertical-align:middle;">
-                </span>
-                <span>
-                  <button class="btn btn-warning btn-sm me-2" onclick="showEditMenuImage('${key}')">Edit</button>
-                  <button class="btn btn-danger btn-sm" onclick="deleteMenu('${cat}',${idx})">Delete</button>
-                </span>
-                <span id="edit-menu-image-${key}" style="display:none;">
-                  <input type="file" accept="image/*" id="editMenuImageInput-${key}" style="display:inline-block;width:auto;">
-                  <button class="btn btn-success btn-sm" onclick="updateMenuImage('${cat}',${idx},'${key}')">Save</button>
-                  <button class="btn btn-secondary btn-sm" onclick="cancelEditMenuImage('${key}')">Cancel</button>
-                </span>
-              `;
-              menuList.appendChild(li);
-            });
-          }
-        });
-        // Only show the fallback if ALL categories are empty
-        if (!categories.some(cat => Array.isArray(data[cat]) && data[cat].length > 0)) {
-          menuList.innerHTML = '<li class="list-group-item">No menu images found.</li>';
-        }
-      }
-
-      // Show edit image input for a menu item
-      window.showEditMenuImage = function(key) {
-        const editDiv = document.getElementById(`edit-menu-image-${key}`);
-        if (editDiv) editDiv.style.display = 'inline-block';
-      }
-
-      window.cancelEditMenuImage = function(key) {
-        const editDiv = document.getElementById(`edit-menu-image-${key}`);
-        if (editDiv) editDiv.style.display = 'none';
-      }
-
-      window.updateMenuImage = async function(category, idx, key) {
-        const input = document.getElementById(`editMenuImageInput-${key}`);
-        if (!input || input.files.length === 0) return;
-        const file = input.files[0];
-        const storageRef = storage.ref('menu/' + Date.now() + '_' + file.name);
-        await storageRef.put(file);
-        const imageUrl = await storageRef.getDownloadURL();
-        // Update Firestore array
-        const itemsRef = db.collection('menu').doc('items');
-        await db.runTransaction(async (transaction) => {
-          const doc = await transaction.get(itemsRef);
-          let data = doc.exists ? doc.data() : {};
-          let arr = Array.isArray(data[category]) ? data[category] : [];
-          if (arr[idx]) {
-            arr[idx].image = imageUrl;
-          }
-          transaction.set(itemsRef, { ...data, [category]: arr }, { merge: true });
-        });
-        loadMenu();
-      }
-
-      window.deleteMenu = async function(category, idx) {
-        const itemsRef = db.collection('menu').doc('items');
-        await db.runTransaction(async (transaction) => {
-          const doc = await transaction.get(itemsRef);
-          let data = doc.exists ? doc.data() : {};
-          let arr = Array.isArray(data[category]) ? data[category] : [];
-          arr.splice(idx, 1);
-          transaction.set(itemsRef, { ...data, [category]: arr }, { merge: true });
-        });
-        loadMenu();
-      }
-
-      // RECENT EVENTS CRUD
-      const recentForm = document.getElementById('recentForm');
-      const recentList = document.getElementById('recentList');
-recentForm.addEventListener('submit', async function(e) {
-  e.preventDefault();
-
-  const fileInput = document.getElementById('recentImageFile');
-
-  if (fileInput.files.length === 0) return;
-
-  const file = fileInput.files[0];
-
-  const storageRef = storage.ref('recent/' + Date.now() + '_' + file.name);
-  await storageRef.put(file);
-
-  const imageUrl = await storageRef.getDownloadURL();
-
-  // Save ONLY image
-  await db.collection('recent').add({
-    image: imageUrl,
-    createdAt: firebase.firestore.FieldValue.serverTimestamp()
-  });
-
-  recentForm.reset();
-  document.getElementById('recentImagePreview').style.display = 'none';
-
-  loadRecent();
-});
-
-async function loadRecent() {
-  recentList.innerHTML = '';
-
-  const snap = await db.collection('recent')
-    .orderBy('createdAt', 'desc')
-    .get();
-
-  snap.forEach(doc => {
-    const data = doc.data();
-
-    const li = document.createElement('li');
-    li.className = 'list-group-item';
-
-    li.innerHTML = `
-      <div class="d-flex justify-content-between align-items-center">
-        <img src="${data.image}" style="width:80px;height:80px;object-fit:cover;">
-        <button class="btn btn-danger btn-sm" onclick="deleteRecent('${doc.id}')">Delete</button>
+  <!-- LOGIN -->
+  <div id="login-section">
+    <h4>Login</h4>
+    <form id="loginForm">
+      <div class="mb-3">
+        <input type="email" id="email" class="form-control" placeholder="Email" required>
       </div>
-    `;
+      <div class="mb-3">
+        <input type="password" id="password" class="form-control" placeholder="Password" required>
+      </div>
+      <button type="submit" class="btn btn-primary">Login</button>
+    </form>
+    <div id="loginError" class="text-danger mt-2"></div>
+  </div>
 
-    recentList.appendChild(li);
+  <!-- DASHBOARD -->
+  <div id="dashboard-section" style="display:none;">
+    <button id="logoutBtn" class="btn btn-secondary mb-3">Logout</button>
+    <h4>Welcome, Owner!</h4>
+    <hr>
+
+    <!-- MENU -->
+    <h5>Menu Management</h5>
+    <form id="menuForm" class="mb-3">
+      <div class="row g-2">
+        <div class="col-md-4">
+          <select id="menuCategory" class="form-control" required>
+            <option value="catering">Catering</option>
+            <option value="maindishes">Main Dishes</option>
+            <option value="tray">Tray</option>
+          </select>
+        </div>
+        <div class="col-md-5">
+          <input type="file" id="menuImageFile" class="form-control" accept="image/*" required>
+        </div>
+        <div class="col-md-2">
+          <img id="menuImagePreview" style="width:40px;display:none;">
+        </div>
+        <div class="col-md-1">
+          <button type="submit" class="btn btn-success w-100">Upload</button>
+        </div>
+      </div>
+    </form>
+
+    <ul id="menuList" class="list-group mb-4"></ul>
+
+    <!-- RECENT -->
+    <h5>Recent Events Management</h5>
+    <form id="recentForm" class="mb-3">
+      <div class="row g-2">
+        <div class="col-md-6">
+          <input type="file" id="recentImageFile" class="form-control" accept="image/*" required>
+        </div>
+        <div class="col-md-2">
+          <img id="recentImagePreview" style="width:40px;display:none;">
+        </div>
+        <div class="col-md-2">
+          <button type="submit" class="btn btn-success w-100">Upload</button>
+        </div>
+      </div>
+    </form>
+
+    <ul id="recentList" class="list-group"></ul>
+  </div>
+</div>
+
+<!-- FIREBASE -->
+<script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-storage-compat.js"></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyBuNw7VNAM-Do9ZkiXY5LHKVStJGRwd0Uw",
+    authDomain: "menu-restaurant-268da.firebaseapp.com",
+    projectId: "menu-restaurant-268da",
+    storageBucket: "menu-restaurant-268da.appspot.com",
+    messagingSenderId: "1060452948086",
+    appId: "1:1060452948086:web:9009a4570c15f334a02757"
+  };
+
+  firebase.initializeApp(firebaseConfig);
+
+  const auth = firebase.auth();
+  const db = firebase.firestore();
+  const storage = firebase.storage();
+
+  // PREVIEW MENU IMAGE
+  document.getElementById('menuImageFile').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    const preview = document.getElementById('menuImagePreview');
+    if (file) {
+      preview.src = URL.createObjectURL(file);
+      preview.style.display = 'inline-block';
+    }
   });
-}
 
-      window.deleteRecent = async function(id) {
-        await db.collection('recent').doc(id).delete();
-        loadRecent();
+  // PREVIEW RECENT IMAGE
+  document.getElementById('recentImageFile').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    const preview = document.getElementById('recentImagePreview');
+    if (file) {
+      preview.src = URL.createObjectURL(file);
+      preview.style.display = 'inline-block';
+    }
+  });
+
+  // ======================
+  // MENU UPLOAD (FIXED)
+  // ======================
+  document.getElementById('menuForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+
+    try {
+      const category = document.getElementById('menuCategory').value;
+      const fileInput = document.getElementById('menuImageFile');
+
+      if (fileInput.files.length === 0) {
+        alert("Select an image first");
+        return;
       }
 
-      // Login logic
-      document.getElementById('loginForm').addEventListener('submit', function(e) {
-        e.preventDefault();
-        const email = document.getElementById('email').value;
-        const password = document.getElementById('password').value;
-        auth.signInWithEmailAndPassword(email, password)
-          .then(() => {
-            document.getElementById('login-section').style.display = 'none';
-            document.getElementById('dashboard-section').style.display = 'block';
-            document.getElementById('loginError').textContent = '';
-          })
-          .catch(err => {
-            document.getElementById('loginError').textContent = err.message;
-          });
+      const file = fileInput.files[0];
+      console.log("Uploading menu image:", file.name);
+
+      const storageRef = storage.ref('menu/' + Date.now() + '_' + file.name);
+
+      await storageRef.put(file);
+
+      const imageUrl = await storageRef.getDownloadURL();
+      console.log("Download URL:", imageUrl);
+
+      const itemsRef = db.collection('menu').doc('items');
+
+      await db.runTransaction(async (transaction) => {
+        const doc = await transaction.get(itemsRef);
+        let data = doc.exists ? doc.data() : {};
+        let arr = Array.isArray(data[category]) ? data[category] : [];
+        arr.push({ image: imageUrl });
+        transaction.set(itemsRef, { ...data, [category]: arr }, { merge: true });
       });
 
-      // Logout logic
-      document.getElementById('logoutBtn').addEventListener('click', function() {
-        auth.signOut().then(() => {
-          document.getElementById('login-section').style.display = 'block';
-          document.getElementById('dashboard-section').style.display = 'none';
-        });
+      alert("Menu uploaded successfully ✅");
+
+      fileInput.value = "";
+      document.getElementById('menuImagePreview').style.display = 'none';
+
+      loadMenu();
+
+    } catch (err) {
+      console.error("Menu upload error:", err);
+      alert("Upload failed: " + err.message);
+    }
+  });
+
+  // ======================
+  // RECENT UPLOAD
+  // ======================
+  document.getElementById('recentForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+
+    try {
+      const fileInput = document.getElementById('recentImageFile');
+
+      if (fileInput.files.length === 0) return;
+
+      const file = fileInput.files[0];
+
+      const storageRef = storage.ref('recent/' + Date.now() + '_' + file.name);
+
+      await storageRef.put(file);
+
+      const imageUrl = await storageRef.getDownloadURL();
+
+      await db.collection('recent').add({
+        image: imageUrl,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
       });
 
-      // Auth state listener
-      auth.onAuthStateChanged(user => {
-        if (user) {
-          document.getElementById('login-section').style.display = 'none';
-          document.getElementById('dashboard-section').style.display = 'block';
-          loadMenu();
-          loadRecent();
-        } else {
-          document.getElementById('login-section').style.display = 'block';
-          document.getElementById('dashboard-section').style.display = 'none';
-        }
+      alert("Recent event uploaded ✅");
+
+      fileInput.value = "";
+      document.getElementById('recentImagePreview').style.display = 'none';
+
+      loadRecent();
+
+    } catch (err) {
+      console.error("Recent upload error:", err);
+      alert("Upload failed: " + err.message);
+    }
+  });
+
+  // ======================
+  // LOAD MENU
+  // ======================
+  async function loadMenu() {
+    const menuList = document.getElementById('menuList');
+    menuList.innerHTML = '';
+
+    const doc = await db.collection('menu').doc('items').get();
+    if (!doc.exists) {
+      menuList.innerHTML = '<li class="list-group-item">No menu found</li>';
+      return;
+    }
+
+    const data = doc.data();
+    const categories = ['catering', 'maindishes', 'tray'];
+
+    categories.forEach(cat => {
+      const header = document.createElement('li');
+      header.className = 'list-group-item active';
+      header.textContent = cat.toUpperCase();
+      menuList.appendChild(header);
+
+      const arr = Array.isArray(data[cat]) ? data[cat] : [];
+
+      arr.forEach(item => {
+        const li = document.createElement('li');
+        li.className = 'list-group-item';
+        li.innerHTML = `<img src="${item.image}" style="width:60px;height:60px;object-fit:cover;">`;
+        menuList.appendChild(li);
       });
     });
-    </script>
+  }
+
+  // ======================
+  // LOAD RECENT
+  // ======================
+  async function loadRecent() {
+    const recentList = document.getElementById('recentList');
+    recentList.innerHTML = '';
+
+    const snap = await db.collection('recent')
+      .orderBy('createdAt', 'desc')
+      .get();
+
+    snap.forEach(doc => {
+      const data = doc.data();
+
+      const li = document.createElement('li');
+      li.className = 'list-group-item';
+
+      li.innerHTML = `<img src="${data.image}" style="width:80px;height:80px;object-fit:cover;">`;
+
+      recentList.appendChild(li);
+    });
+  }
+
+  // ======================
+  // LOGIN
+  // ======================
+  document.getElementById('loginForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+
+    const email = document.getElementById('email').value;
+    const password = document.getElementById('password').value;
+
+    auth.signInWithEmailAndPassword(email, password)
+      .catch(err => {
+        document.getElementById('loginError').textContent = err.message;
+      });
+  });
+
+  // LOGOUT
+  document.getElementById('logoutBtn').addEventListener('click', () => {
+    auth.signOut();
+  });
+
+  // AUTH STATE
+  auth.onAuthStateChanged(user => {
+    if (user) {
+      document.getElementById('login-section').style.display = 'none';
+      document.getElementById('dashboard-section').style.display = 'block';
+
+      loadMenu();
+      loadRecent();
+    } else {
+      document.getElementById('login-section').style.display = 'block';
+      document.getElementById('dashboard-section').style.display = 'none';
+    }
+  });
+
+});
+</script>
+
+</body>
+</html>
 </body>
 </html>
