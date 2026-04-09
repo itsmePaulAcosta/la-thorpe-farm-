@@ -141,21 +141,36 @@
       async function loadMenu() {
         menuList.innerHTML = '';
         const doc = await db.collection('menu').doc('items').get();
-        if (!doc.exists) return;
+        if (!doc.exists) {
+          menuList.innerHTML = '<li class="list-group-item">No menu images found.</li>';
+          return;
+        }
         const data = doc.data();
         const categories = ['catering', 'maindishes', 'tray'];
+        let hasAny = false;
         categories.forEach(cat => {
-          if (Array.isArray(data[cat])) {
-            data[cat].forEach((item, idx) => {
+          const arr = Array.isArray(data[cat]) ? data[cat] : [];
+          // Add category header
+          const header = document.createElement('li');
+          header.className = 'list-group-item active';
+          header.textContent = cat.charAt(0).toUpperCase() + cat.slice(1);
+          menuList.appendChild(header);
+          if (arr.length === 0) {
+            const emptyLi = document.createElement('li');
+            emptyLi.className = 'list-group-item';
+            emptyLi.textContent = 'No images.';
+            menuList.appendChild(emptyLi);
+          } else {
+            hasAny = true;
+            arr.forEach((item, idx) => {
               const li = document.createElement('li');
               li.className = 'list-group-item d-flex justify-content-between align-items-center';
               li.innerHTML = `
                 <span>
-                  <span class='badge bg-primary me-2'>${cat}</span>
                   <img src="${item.image}" alt="" style="width:60px;height:60px;object-fit:cover;margin-right:10px;">
                 </span>
                 <span>
-                  <button class="btn btn-warning btn-sm me-2" onclick="showEditMenuImage('${cat}',${idx},'${item.image.replace(/'/g, "\\'")}')">Edit</button>
+                  <button class="btn btn-warning btn-sm me-2" onclick="showEditMenuImage('${cat}',${idx},'${item.image.replace(/'/g, "\\'")}")">Edit</button>
                   <button class="btn btn-danger btn-sm" onclick="deleteMenu('${cat}',${idx})">Delete</button>
                 </span>
                 <span id="edit-menu-image-${cat}-${idx}" style="display:none;">
@@ -168,6 +183,9 @@
             });
           }
         });
+        if (!hasAny) {
+          menuList.innerHTML = '<li class="list-group-item">No menu images found.</li>';
+        }
       }
 
       // Show edit image input for a menu item
