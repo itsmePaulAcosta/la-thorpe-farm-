@@ -31,7 +31,8 @@
               <div class="row g-2">
                 <div class="col-md-3"><input type="text" id="menuName" class="form-control" placeholder="Dish Name" required></div>
                 <div class="col-md-2"><input type="number" id="menuPrice" class="form-control" placeholder="Price" required></div>
-                <div class="col-md-4"><input type="text" id="menuImage" class="form-control" placeholder="Image URL" required></div>
+                <div class="col-md-3"><input type="file" id="menuImageFile" class="form-control" accept="image/*"></div>
+                <div class="col-md-1"><img id="menuImagePreview" src="" style="width:40px;display:none;"></div>
                 <div class="col-md-2">
                   <select id="menuCategory" class="form-control" required>
                     <option value="catering">Catering</option>
@@ -48,9 +49,10 @@
             <form id="recentForm" class="mb-3">
               <div class="row g-2">
                 <div class="col-md-3"><input type="text" id="recentTitle" class="form-control" placeholder="Title" required></div>
-                <div class="col-md-4"><input type="text" id="recentImage" class="form-control" placeholder="Image URL" required></div>
+                <div class="col-md-3"><input type="file" id="recentImageFile" class="form-control" accept="image/*"></div>
+                <div class="col-md-1"><img id="recentImagePreview" src="" style="width:40px;display:none;"></div>
                 <div class="col-md-3"><input type="date" id="recentDate" class="form-control" required></div>
-                <div class="col-md-2"><input type="text" id="recentDesc" class="form-control" placeholder="Description" required></div>
+                <div class="col-md-1"><input type="text" id="recentDesc" class="form-control" placeholder="Description" required></div>
                 <div class="col-md-1"><button type="submit" class="btn btn-success w-100">Add</button></div>
               </div>
             </form>
@@ -64,6 +66,8 @@
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-auth-compat.js"></script>
     <!-- Firebase Firestore -->
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore-compat.js"></script>
+    <!-- Firebase Storage -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-storage-compat.js"></script>
 
     <script>
 
@@ -81,6 +85,33 @@
       firebase.initializeApp(firebaseConfig);
       const auth = firebase.auth();
       const db = firebase.firestore();
+      const storage = firebase.storage();
+
+      // Image preview for menu
+      document.getElementById('menuImageFile').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        const preview = document.getElementById('menuImagePreview');
+        if (file) {
+          preview.src = URL.createObjectURL(file);
+          preview.style.display = 'inline-block';
+        } else {
+          preview.src = '';
+          preview.style.display = 'none';
+        }
+      });
+
+      // Image preview for recent
+      document.getElementById('recentImageFile').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        const preview = document.getElementById('recentImagePreview');
+        if (file) {
+          preview.src = URL.createObjectURL(file);
+          preview.style.display = 'inline-block';
+        } else {
+          preview.src = '';
+          preview.style.display = 'none';
+        }
+      });
 
       // MENU CRUD (with nested structure)
       const menuForm = document.getElementById('menuForm');
@@ -90,9 +121,16 @@
         e.preventDefault();
         const name = document.getElementById('menuName').value;
         const price = parseFloat(document.getElementById('menuPrice').value);
-        const image = document.getElementById('menuImage').value;
         const category = document.getElementById('menuCategory').value;
-        const item = { name, price, image };
+        const fileInput = document.getElementById('menuImageFile');
+        let imageUrl = '';
+        if (fileInput.files.length > 0) {
+          const file = fileInput.files[0];
+          const storageRef = storage.ref('menu/' + Date.now() + '_' + file.name);
+          await storageRef.put(file);
+          imageUrl = await storageRef.getDownloadURL();
+        }
+        const item = { name, price, image: imageUrl };
         const itemsRef = db.collection('menu').doc('items');
         await db.runTransaction(async (transaction) => {
           const doc = await transaction.get(itemsRef);
@@ -102,6 +140,7 @@
           transaction.set(itemsRef, { ...data, [category]: arr }, { merge: true });
         });
         menuForm.reset();
+        document.getElementById('menuImagePreview').style.display = 'none';
         loadMenu();
       });
 
@@ -141,11 +180,19 @@
       recentForm.addEventListener('submit', async function(e) {
         e.preventDefault();
         const title = document.getElementById('recentTitle').value;
-        const image = document.getElementById('recentImage').value;
         const date = document.getElementById('recentDate').value;
         const description = document.getElementById('recentDesc').value;
-        await db.collection('recent').add({ title, image, date, description });
+        const fileInput = document.getElementById('recentImageFile');
+        let imageUrl = '';
+        if (fileInput.files.length > 0) {
+          const file = fileInput.files[0];
+          const storageRef = storage.ref('recent/' + Date.now() + '_' + file.name);
+          await storageRef.put(file);
+          imageUrl = await storageRef.getDownloadURL();
+        }
+        await db.collection('recent').add({ title, image: imageUrl, date, description });
         recentForm.reset();
+        document.getElementById('recentImagePreview').style.display = 'none';
         loadRecent();
       });
 
