@@ -163,20 +163,23 @@
           } else {
             hasAny = true;
             arr.forEach((item, idx) => {
+              // Unique key for edit controls
+              const key = cat + '-' + idx;
               const li = document.createElement('li');
               li.className = 'list-group-item d-flex justify-content-between align-items-center';
               li.innerHTML = `
                 <span>
-                  <img src="${item.image}" alt="" style="width:60px;height:60px;object-fit:cover;margin-right:10px;">
+                  <span class="badge bg-secondary me-2">#${idx + 1}</span>
+                  <img src="${item.image}" alt="Menu Image" style="width:60px;height:60px;object-fit:cover;margin-right:10px;vertical-align:middle;">
                 </span>
                 <span>
-                  <button class="btn btn-warning btn-sm me-2" onclick="showEditMenuImage('${cat}',${idx},'${item.image.replace(/'/g, "\\'")}")">Edit</button>
+                  <button class="btn btn-warning btn-sm me-2" onclick="showEditMenuImage('${key}')">Edit</button>
                   <button class="btn btn-danger btn-sm" onclick="deleteMenu('${cat}',${idx})">Delete</button>
                 </span>
-                <span id="edit-menu-image-${cat}-${idx}" style="display:none;">
-                  <input type="file" accept="image/*" id="editMenuImageInput-${cat}-${idx}" style="display:inline-block;width:auto;">
-                  <button class="btn btn-success btn-sm" onclick="updateMenuImage('${cat}',${idx})">Save</button>
-                  <button class="btn btn-secondary btn-sm" onclick="cancelEditMenuImage('${cat}',${idx})">Cancel</button>
+                <span id="edit-menu-image-${key}" style="display:none;">
+                  <input type="file" accept="image/*" id="editMenuImageInput-${key}" style="display:inline-block;width:auto;">
+                  <button class="btn btn-success btn-sm" onclick="updateMenuImage('${cat}',${idx},'${key}')">Save</button>
+                  <button class="btn btn-secondary btn-sm" onclick="cancelEditMenuImage('${key}')">Cancel</button>
                 </span>
               `;
               menuList.appendChild(li);
@@ -190,20 +193,18 @@
       }
 
       // Show edit image input for a menu item
-      window.showEditMenuImage = function(category, idx, imageUrl) {
-        const editDiv = document.getElementById(`edit-menu-image-${category}-${idx}`);
+      window.showEditMenuImage = function(key) {
+        const editDiv = document.getElementById(`edit-menu-image-${key}`);
         if (editDiv) editDiv.style.display = 'inline-block';
       }
 
-      // Cancel edit image input
-      window.cancelEditMenuImage = function(category, idx) {
-        const editDiv = document.getElementById(`edit-menu-image-${category}-${idx}`);
+      window.cancelEditMenuImage = function(key) {
+        const editDiv = document.getElementById(`edit-menu-image-${key}`);
         if (editDiv) editDiv.style.display = 'none';
       }
 
-      // Update menu image for a specific item
-      window.updateMenuImage = async function(category, idx) {
-        const input = document.getElementById(`editMenuImageInput-${category}-${idx}`);
+      window.updateMenuImage = async function(category, idx, key) {
+        const input = document.getElementById(`editMenuImageInput-${key}`);
         if (!input || input.files.length === 0) return;
         const file = input.files[0];
         const storageRef = storage.ref('menu/' + Date.now() + '_' + file.name);
