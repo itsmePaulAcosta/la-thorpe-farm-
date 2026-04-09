@@ -67,99 +67,7 @@
 
     <script>
 
-          // Firestore
-          const db = firebase.firestore();
-
-          // MENU CRUD (with nested structure)
-          const menuForm = document.getElementById('menuForm');
-          const menuList = document.getElementById('menuList');
-
-          menuForm.addEventListener('submit', async function(e) {
-            e.preventDefault();
-            const name = document.getElementById('menuName').value;
-            const price = parseFloat(document.getElementById('menuPrice').value);
-            const image = document.getElementById('menuImage').value;
-            const category = document.getElementById('menuCategory').value;
-            const item = { name, price, image };
-            const itemsRef = db.collection('menu').doc('items');
-            await db.runTransaction(async (transaction) => {
-              const doc = await transaction.get(itemsRef);
-              let data = doc.exists ? doc.data() : {};
-              let arr = Array.isArray(data[category]) ? data[category] : [];
-              arr.push(item);
-              transaction.set(itemsRef, { ...data, [category]: arr }, { merge: true });
-            });
-            menuForm.reset();
-            loadMenu();
-          });
-
-          async function loadMenu() {
-            menuList.innerHTML = '';
-            const doc = await db.collection('menu').doc('items').get();
-            if (!doc.exists) return;
-            const data = doc.data();
-            const categories = ['catering', 'maindishes', 'tray'];
-            categories.forEach(cat => {
-              if (Array.isArray(data[cat])) {
-                data[cat].forEach((item, idx) => {
-                  const li = document.createElement('li');
-                  li.className = 'list-group-item d-flex justify-content-between align-items-center';
-                  li.innerHTML = `<span><span class='badge bg-primary me-2'>${cat}</span><img src="${item.image}" alt="" style="width:40px;height:40px;object-fit:cover;margin-right:10px;"> <strong>${item.name}</strong> - ₱${item.price}</span><button class="btn btn-danger btn-sm" onclick="deleteMenu('${cat}',${idx})">Delete</button>`;
-                  menuList.appendChild(li);
-                });
-              }
-            });
-          }
-
-          window.deleteMenu = async function(category, idx) {
-            const itemsRef = db.collection('menu').doc('items');
-            await db.runTransaction(async (transaction) => {
-              const doc = await transaction.get(itemsRef);
-              let data = doc.exists ? doc.data() : {};
-              let arr = Array.isArray(data[category]) ? data[category] : [];
-              arr.splice(idx, 1);
-              transaction.set(itemsRef, { ...data, [category]: arr }, { merge: true });
-            });
-            loadMenu();
-          }
-
-          // RECENT EVENTS CRUD
-          const recentForm = document.getElementById('recentForm');
-          const recentList = document.getElementById('recentList');
-          recentForm.addEventListener('submit', async function(e) {
-            e.preventDefault();
-            const title = document.getElementById('recentTitle').value;
-            const image = document.getElementById('recentImage').value;
-            const date = document.getElementById('recentDate').value;
-            const description = document.getElementById('recentDesc').value;
-            await db.collection('recent').add({ title, image, date, description });
-            recentForm.reset();
-            loadRecent();
-          });
-
-          async function loadRecent() {
-            recentList.innerHTML = '';
-            const snap = await db.collection('recent').orderBy('date', 'desc').get();
-            snap.forEach(doc => {
-              const li = document.createElement('li');
-              li.className = 'list-group-item d-flex justify-content-between align-items-center';
-              li.innerHTML = `<span><img src="${doc.data().image}" alt="" style="width:40px;height:40px;object-fit:cover;margin-right:10px;"> <strong>${doc.data().title}</strong> (${doc.data().date}) - ${doc.data().description}</span><button class="btn btn-danger btn-sm" onclick="deleteRecent('${doc.id}')">Delete</button>`;
-              recentList.appendChild(li);
-            });
-          }
-
-          window.deleteRecent = async function(id) {
-            await db.collection('recent').doc(id).delete();
-            loadRecent();
-          }
-
-          // Load data after login
-          firebase.auth().onAuthStateChanged(user => {
-            if (user) {
-              loadMenu();
-              loadRecent();
-            }
-          });
+    document.addEventListener('DOMContentLoaded', function() {
       // Your web app's Firebase configuration
       const firebaseConfig = {
         apiKey: "AIzaSyBuNw7VNAM-Do9ZkiXY5LHKVStJGRwd0Uw",
@@ -172,6 +80,90 @@
       // Initialize Firebase
       firebase.initializeApp(firebaseConfig);
       const auth = firebase.auth();
+      const db = firebase.firestore();
+
+      // MENU CRUD (with nested structure)
+      const menuForm = document.getElementById('menuForm');
+      const menuList = document.getElementById('menuList');
+
+      menuForm.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const name = document.getElementById('menuName').value;
+        const price = parseFloat(document.getElementById('menuPrice').value);
+        const image = document.getElementById('menuImage').value;
+        const category = document.getElementById('menuCategory').value;
+        const item = { name, price, image };
+        const itemsRef = db.collection('menu').doc('items');
+        await db.runTransaction(async (transaction) => {
+          const doc = await transaction.get(itemsRef);
+          let data = doc.exists ? doc.data() : {};
+          let arr = Array.isArray(data[category]) ? data[category] : [];
+          arr.push(item);
+          transaction.set(itemsRef, { ...data, [category]: arr }, { merge: true });
+        });
+        menuForm.reset();
+        loadMenu();
+      });
+
+      async function loadMenu() {
+        menuList.innerHTML = '';
+        const doc = await db.collection('menu').doc('items').get();
+        if (!doc.exists) return;
+        const data = doc.data();
+        const categories = ['catering', 'maindishes', 'tray'];
+        categories.forEach(cat => {
+          if (Array.isArray(data[cat])) {
+            data[cat].forEach((item, idx) => {
+              const li = document.createElement('li');
+              li.className = 'list-group-item d-flex justify-content-between align-items-center';
+              li.innerHTML = `<span><span class='badge bg-primary me-2'>${cat}</span><img src="${item.image}" alt="" style="width:40px;height:40px;object-fit:cover;margin-right:10px;"> <strong>${item.name}</strong> - ₱${item.price}</span><button class="btn btn-danger btn-sm" onclick="deleteMenu('${cat}',${idx})">Delete</button>`;
+              menuList.appendChild(li);
+            });
+          }
+        });
+      }
+
+      window.deleteMenu = async function(category, idx) {
+        const itemsRef = db.collection('menu').doc('items');
+        await db.runTransaction(async (transaction) => {
+          const doc = await transaction.get(itemsRef);
+          let data = doc.exists ? doc.data() : {};
+          let arr = Array.isArray(data[category]) ? data[category] : [];
+          arr.splice(idx, 1);
+          transaction.set(itemsRef, { ...data, [category]: arr }, { merge: true });
+        });
+        loadMenu();
+      }
+
+      // RECENT EVENTS CRUD
+      const recentForm = document.getElementById('recentForm');
+      const recentList = document.getElementById('recentList');
+      recentForm.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const title = document.getElementById('recentTitle').value;
+        const image = document.getElementById('recentImage').value;
+        const date = document.getElementById('recentDate').value;
+        const description = document.getElementById('recentDesc').value;
+        await db.collection('recent').add({ title, image, date, description });
+        recentForm.reset();
+        loadRecent();
+      });
+
+      async function loadRecent() {
+        recentList.innerHTML = '';
+        const snap = await db.collection('recent').orderBy('date', 'desc').get();
+        snap.forEach(doc => {
+          const li = document.createElement('li');
+          li.className = 'list-group-item d-flex justify-content-between align-items-center';
+          li.innerHTML = `<span><img src="${doc.data().image}" alt="" style="width:40px;height:40px;object-fit:cover;margin-right:10px;"> <strong>${doc.data().title}</strong> (${doc.data().date}) - ${doc.data().description}</span><button class="btn btn-danger btn-sm" onclick="deleteRecent('${doc.id}')">Delete</button>`;
+          recentList.appendChild(li);
+        });
+      }
+
+      window.deleteRecent = async function(id) {
+        await db.collection('recent').doc(id).delete();
+        loadRecent();
+      }
 
       // Login logic
       document.getElementById('loginForm').addEventListener('submit', function(e) {
@@ -202,11 +194,14 @@
         if (user) {
           document.getElementById('login-section').style.display = 'none';
           document.getElementById('dashboard-section').style.display = 'block';
+          loadMenu();
+          loadRecent();
         } else {
           document.getElementById('login-section').style.display = 'block';
           document.getElementById('dashboard-section').style.display = 'none';
         }
       });
+    });
     </script>
 </body>
 </html>
