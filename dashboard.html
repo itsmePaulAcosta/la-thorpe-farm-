@@ -69,7 +69,7 @@
 
     <script>
 
-    document.addEventListener('DOMContentLoaded', function() {
+    function startDashboard() {
       // Your web app's Firebase configuration
       const firebaseConfig = {
         apiKey: "AIzaSyBuNw7VNAM-Do9ZkiXY5LHKVStJGRwd0Uw",
@@ -303,14 +303,20 @@
         if (user) {
           document.getElementById('login-section').style.display = 'none';
           document.getElementById('dashboard-section').style.display = 'block';
-          loadMenu();
-          loadRecent();
+          setTimeout(loadMenu, 100); // Ensure DOM is ready
+          setTimeout(loadRecent, 100);
         } else {
           document.getElementById('login-section').style.display = 'block';
           document.getElementById('dashboard-section').style.display = 'none';
         }
       });
-    });
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', startDashboard);
+    } else {
+      startDashboard();
+    }
     </script>
 </body>
 </html>
