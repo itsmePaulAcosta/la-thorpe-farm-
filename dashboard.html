@@ -222,20 +222,42 @@ async function uploadMenu() {
         });
     }
 
-    // 3. Insert all images into DB at once
-    const { error: dbError } = await supabaseClient
-        .from("menus")
-        .insert(uploads);
-
-    if (dbError) {
-        console.error(dbError);
-        alert(dbError.message);
-        return;
-    }
-
     alert(`✅ Uploaded ${uploads.length} images successfully!`);
 
-    loadMenu();
+// ✅ CLEAR INPUT + PREVIEW
+document.getElementById("file").value = "";
+document.getElementById("preview").innerHTML = "";
+
+// OPTIONAL: reset category
+document.getElementById("category").selectedIndex = 0;
+
+loadMenu();
+
+    // 3. Insert all images into DB at once
+   // 3. Insert all images into DB at once
+const { error: dbError } = await supabaseClient
+    .from("menus")
+    .insert(uploads);
+
+if (dbError) {
+    console.error(dbError);
+    alert(dbError.message);
+    return;
+}
+
+alert(`✅ Uploaded ${uploads.length} images successfully!`);
+
+// ✅ CLEAR FILE INPUT
+document.getElementById("file").value = "";
+
+// ✅ CLEAR IMAGE PREVIEW
+document.getElementById("preview").innerHTML = "";
+
+// ✅ RESET CATEGORY (optional)
+document.getElementById("category").selectedIndex = 0;
+
+// RELOAD LIST
+loadMenu();
 }
 
 
