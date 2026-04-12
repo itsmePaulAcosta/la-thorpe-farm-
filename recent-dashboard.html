@@ -68,6 +68,13 @@
         <label class="mb-2">Choose Image</label>
         <input type="file" id="file" class="form-control mb-3"multiple>
 
+        <label class="mb-2">Photo Description</label>
+        <textarea
+            id="description"
+            class="form-control mb-3"
+            rows="3"
+            placeholder="Add a short description for this photo"></textarea>
+
          
 
         <select id="category" class="form-control mb-3">
@@ -170,6 +177,7 @@ async function uploadRecent() {
 
     const files = document.getElementById("file").files;
     const category = document.getElementById("category").value;
+    const description = document.getElementById("description").value.trim();
 
     if (!files.length) {
         alert("Select at least one image");
@@ -199,7 +207,7 @@ async function uploadRecent() {
         // Save to database
         const { error: dbError } = await supabaseClient
             .from("recent")
-            .insert([{ image_url, category }]);
+            .insert([{ image_url, category, description }]);
 
         if (dbError) {
             alert(dbError.message);
@@ -208,6 +216,8 @@ async function uploadRecent() {
     }
 
     alert("All images uploaded!");
+    document.getElementById("file").value = "";
+    document.getElementById("description").value = "";
     loadRecent();
 }
 
@@ -234,6 +244,7 @@ async function loadRecent() {
                 <div class="card p-2">
                     <img src="${item.image_url}" class="img-fluid rounded mb-2">
                     <small class="text-muted">${item.category}</small>
+                    <p class="mb-2 mt-2">${item.description || "No description added."}</p>
 
                     <button class="btn btn-danger btn-sm mt-2"
                         onclick="deleteRecent('${item.id}')">
