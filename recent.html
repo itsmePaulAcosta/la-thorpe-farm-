@@ -229,7 +229,12 @@ async function loadRecent() {
 
         const card = `
             <div class="col-lg-3 col-md-4 col-sm-6">
-                <img src="${item.image_url}" class="img-fluid rounded">
+                <div class="bg-white h-100 shadow-sm rounded overflow-hidden">
+                    <img src="${item.image_url}" class="img-fluid w-100" alt="${item.description || "Recent event photo"}">
+                    <div class="p-3">
+                        <p class="mb-0 small text-muted">${item.description || "Recent activity at La Thorpe Farm."}</p>
+                    </div>
+                </div>
             </div>
         `;
 
