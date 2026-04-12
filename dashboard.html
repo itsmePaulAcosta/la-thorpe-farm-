@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0/dist/css/bootstrap.min.css" rel="stylesheet">
-
+  <link rel="icon" type="image/png" sizes="32x32" href="img/logo.png">
 <!-- Supabase v2 (IMPORTANT FIX: use UMD build) -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
  <link href="lib/animate/animate.min.css" rel="stylesheet">
@@ -67,7 +67,10 @@
     <div class="card p-3 mb-4">
 
         <label class="mb-2">Choose Image</label>
-        <input type="file" id="file" class="form-control mb-3">
+    <input type="file" id="file" class="form-control mb-3" multiple accept="image/*">
+<small class="text-muted">You can select up to 15 images</small>
+
+<div id="preview" class="row g-2 mt-2"></div>
 
         <select id="category" class="form-control mb-3">
             <option value="main">Main</option>
@@ -80,14 +83,52 @@
         </button>
 
     </div>
+         <button class="btn btn-danger btn-sm mb-3" onclick="deleteSelected()">
+    🗑 Delete Selected
+</button>
 
     <!-- LIST -->
     <div class="card p-3">
         <h5>Menu Items</h5>
-        <div id="list" class="row g-3"></div>
+   
+       <ul class="nav nav-pills mb-3">
+    <li class="nav-item">
+        <button class="nav-link active" data-bs-toggle="pill" data-bs-target="#mainTab">
+            📁 Main Dishes
+        </button>
+    </li>
+    <li class="nav-item">
+        <button class="nav-link" data-bs-toggle="pill" data-bs-target="#cateringTab">
+            📁 Catering
+        </button>
+    </li>
+    <li class="nav-item">
+        <button class="nav-link" data-bs-toggle="pill" data-bs-target="#trayTab">
+            📁 Tray Menu
+        </button>
+    </li>
+</ul>
+
+<div class="tab-content">
+
+    <div class="tab-pane fade show active" id="mainTab">
+        <div id="mainList" class="row g-3"></div>
+    </div>
+
+    <div class="tab-pane fade" id="cateringTab">
+        <div id="cateringList" class="row g-3"></div>
+    </div>
+
+    <div class="tab-pane fade" id="trayTab">
+        <div id="trayList" class="row g-3"></div>
     </div>
 
 </div>
+    </div>
+
+</div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0/dist/js/bootstrap.bundle.min.js"></script>
+
 
 <script>
 /* =========================
@@ -100,10 +141,6 @@ const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS
 const supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
 
 
-async function logout() {
-    await supabaseClient.auth.signOut();
-    window.location.href = "login.html";
-}
 
 async function changePassword() {
     const newPassword = prompt("Enter new password:");
@@ -143,51 +180,70 @@ async function checkAuth() {
 // UPLOAD IMAGE + SAVE TO DB
 async function uploadMenu() {
 
-    const file = document.getElementById("file").files[0];
+    const files = document.getElementById("file").files;
     const category = document.getElementById("category").value;
 
-    if (!file) {
-        alert("Please select an image");
+    if (!files.length) {
+        alert("Please select images");
         return;
     }
 
-    const fileName = `public/${Date.now()}_${file.name}`;
-
-    // 1. Upload to Storage
-    const { error } = await supabaseClient.storage
-        .from("menu-images")
-        .upload(fileName, file);
-
-    if (error) {
-        console.error("UPLOAD ERROR:", error);
-        alert(error.message);
+    if (files.length > 15) {
+        alert("❌ Maximum 15 images only!");
         return;
     }
 
-    // 2. Get Public URL
-    const { data: urlData } = supabaseClient.storage
-        .from("menu-images")
-        .getPublicUrl(fileName);
+    let uploads = [];
 
-    const image_url = urlData.publicUrl;
+    for (let i = 0; i < files.length; i++) {
 
-    // 3. Save to DB
+        const file = files[i];
+        const fileName = `public/${Date.now()}_${i}_${file.name}`;
+
+        // 1. Upload to Supabase Storage
+        const { error: uploadError } = await supabaseClient.storage
+            .from("menu-images")
+            .upload(fileName, file);
+
+        if (uploadError) {
+            console.error(uploadError);
+            alert("Upload failed: " + uploadError.message);
+            return;
+        }
+
+        // 2. Get public URL
+        const { data: urlData } = supabaseClient.storage
+            .from("menu-images")
+            .getPublicUrl(fileName);
+
+        uploads.push({
+            image_url: urlData.publicUrl,
+            category: category
+        });
+    }
+
+    // 3. Insert all images into DB at once
     const { error: dbError } = await supabaseClient
         .from("menus")
-        .insert([{ image_url, category }]);
+        .insert(uploads);
 
     if (dbError) {
-        console.error("DB ERROR:", dbError);
+        console.error(dbError);
         alert(dbError.message);
         return;
     }
 
-    alert("Uploaded successfully!");
+    alert(`✅ Uploaded ${uploads.length} images successfully!`);
+
     loadMenu();
 }
 
+
+let selectedIds = [];
 // LOAD MENU
 async function loadMenu() {
+
+    
 
     const { data, error } = await supabaseClient
         .from("menus")
@@ -199,28 +255,57 @@ async function loadMenu() {
         return;
     }
 
-    const list = document.getElementById("list");
-    list.innerHTML = "";
+    const mainList = document.getElementById("mainList");
+    const cateringList = document.getElementById("cateringList");
+    const trayList = document.getElementById("trayList");
 
- data.forEach(item => {
+    mainList.innerHTML = "";
+    cateringList.innerHTML = "";
+    trayList.innerHTML = "";
 
-    if (!item.id) return; // skip invalid rows
+    data.forEach(item => {
 
-    list.innerHTML += `
-        <div class="col-md-4">
-            <div class="card p-2">
-                <img src="${item.image_url}" class="img-fluid rounded mb-2">
-                <small>Category: ${item.category}</small>
+        const card = `
+    <div class="col-md-4">
+        <div class="card shadow-sm p-2">
 
-                <button class="btn btn-danger btn-sm mt-2"
-                    onclick="deleteMenu('${item.id}')">
-                    Delete
-                </button>
-            </div>
+            <input type="checkbox" class="form-check-input mb-2"
+                onchange="toggleSelect('${item.id}', this.checked)">
+
+            <img src="${item.image_url}" class="img-fluid rounded mb-2">
+
+            <small class="text-muted">Category: ${item.category}</small>
+
+            <button class="btn btn-danger btn-sm mt-2"
+                onclick="deleteMenu('${item.id}')">
+                Delete
+            </button>
         </div>
-    `;
-});
+    </div>
+`;
+
+
+        if (item.category === "main") {
+            mainList.innerHTML += card;
+        }
+
+        if (item.category === "catering") {
+            cateringList.innerHTML += card;
+        }
+
+        if (item.category === "tray") {
+            trayList.innerHTML += card;
+        }
+    });
 }
+function toggleSelect(id, checked) {
+    if (checked) {
+        selectedIds.push(id);
+    } else {
+        selectedIds = selectedIds.filter(x => x !== id);
+    }
+}
+
 
 // DELETE
 async function deleteMenu(id) {
@@ -247,6 +332,31 @@ async function deleteMenu(id) {
 
 loadMenu();
 
+async function deleteSelected() {
+
+    if (selectedIds.length === 0) {
+        alert("No items selected!");
+        return;
+    }
+
+    if (!confirm(`Delete ${selectedIds.length} items?`)) return;
+
+    const { error } = await supabaseClient
+        .from("menus")
+        .delete()
+        .in("id", selectedIds);
+
+    if (error) {
+        alert(error.message);
+        return;
+    }
+
+    alert("Deleted successfully!");
+
+    selectedIds = [];
+    loadMenu();
+}
+
 // =========================
 // LOGOUT
 // =========================
@@ -260,6 +370,33 @@ async function logout() {
 // =========================
 checkAuth();
 
+
+document.getElementById("file").addEventListener("change", function () {
+    const preview = document.getElementById("preview");
+    preview.innerHTML = "";
+
+    const files = this.files;
+
+    if (files.length > 15) {
+        alert("Maximum 15 images only!");
+        this.value = "";
+        return;
+    }
+
+    Array.from(files).forEach(file => {
+        const reader = new FileReader();
+
+        reader.onload = function (e) {
+            preview.innerHTML += `
+                <div class="col-3">
+                    <img src="${e.target.result}" class="img-fluid rounded border">
+                </div>
+            `;
+        };
+
+        reader.readAsDataURL(file);
+    });
+});
 
 </script>
 
